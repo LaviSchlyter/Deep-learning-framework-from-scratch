@@ -23,3 +23,13 @@ class Net1(nn.Module):
         return input_
 
 
+
+# Or you can also use a sequential network
+
+model = nn.Sequential(nn.Linear(a,b),
+                      nn.ReLU(),
+                      nn.Linear(b, c),
+                      nn.Tanh(),
+                      nn.Linear(c,10),
+                      nn.LogSoftmax(dim = 1) #find the probablities for the last output unit
+                      )
