@@ -24,7 +24,7 @@ EXPERIMENT_DENSE = Experiment(
 )
 
 EXPERIMENT_DENSE_EXPAND = Experiment(
-    name="Dense",
+    name="Dense Augmentation",
     build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1]),
     expand_factor=10
 )

@@ -90,8 +90,8 @@ def run_experiment(experiment: Experiment, data_size: int, rounds: int):
     with open(f"output/{experiment.name}.txt", "w") as f:
         f.write("Final performance:\n")
         for i in range(len(plot_legend)):
-            f.write(f"{plot_legend[i]} = {plot_data_mean[i, -1]:.3f} +- {plot_data_dev[i, -1]:.3f}"
-                    f" (min={plot_data_min[i, -1]:.3f}, max={plot_data_max[i, -1]:.3f})\n")
+            f.write(f"{plot_legend[i]} = {plot_data_mean[-1, i]:.3f} +- {plot_data_dev[-1, i]:.3f}"
+                    f" (min={plot_data_min[-1, i]:.3f}, max={plot_data_max[-1, i]:.3f})\n")
 
 
 def main():
