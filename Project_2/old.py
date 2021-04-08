@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 
 class Relu:
@@ -29,6 +30,7 @@ def main():
     relu = Relu()
     relu1 = Relu()
     loss = LossMSE()
+
 
     y = relu.forward(x)
     z = relu1.forward(y)
