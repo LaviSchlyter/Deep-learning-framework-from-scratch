@@ -1,8 +1,5 @@
 import torch
 import math
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 
 n = 1000
 # Generate the set
@@ -13,6 +10,3 @@ def generate_disc_set(nb):
 
 train_input, train_target = generate_disc_set(n)
 test_input, test_target = generate_disc_set(n)
-plt.figure(figsize = (7,7))
-scat = sns.scatterplot(x = train_input[:,0], y=train_input[:,1], hue = train_target)
-plt.show()
