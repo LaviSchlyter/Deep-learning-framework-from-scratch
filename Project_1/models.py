@@ -25,6 +25,7 @@ def dense_network(sizes: List[int], activation: Optional[nn.Module], last_activa
         if i != 0:
             assert activation is not None, f"Networks with sizes {sizes} needs activation function"
             layers.append(activation)
+            layers.append(nn.BatchNorm1d(prev_size))
 
         layers.append(nn.Linear(prev_size, size))
         prev_size = size
@@ -54,11 +55,14 @@ def shared_conv_network(last_activation: nn.Module):
         nn.Conv2d(1, 32, (5, 5)),
         nn.MaxPool2d(2),
         nn.ReLU(),
+        nn.BatchNorm2d(32),
         nn.Conv2d(32, 64, (5, 5)),
         nn.ReLU(),
+        nn.BatchNorm2d(64),
         nn.Flatten(),
         nn.Linear(64, 50),
         nn.ReLU(),
+        nn.BatchNorm1d(50),
         nn.Linear(50, 10),
         last_activation,
     )
