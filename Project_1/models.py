@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import torch
 from torch import nn
@@ -13,7 +13,7 @@ class ViewModule(nn.Module):
         return input.view(*self.shape)
 
 
-def dense_network(sizes: List[int]):
+def dense_network(sizes: List[int], activation: Optional[nn.Module], last_activation: nn.Module = None):
     assert len(sizes) >= 0, "Dense network needs at least an input size"
 
     layers = [
@@ -21,14 +21,15 @@ def dense_network(sizes: List[int]):
     ]
 
     prev_size = sizes[0]
-    for size in sizes[1:]:
+    for i, size in enumerate(sizes[1:]):
+        if i != 0:
+            assert activation is not None, f"Networks with sizes {sizes} needs activation function"
+            layers.append(activation)
+
         layers.append(nn.Linear(prev_size, size))
-        layers.append(nn.ReLU())
         prev_size = size
 
-    if len(layers) > 1:
-        layers[-1] = nn.Sigmoid()
-
+    layers.append(last_activation or activation)
     return nn.Sequential(*layers)
 
 
@@ -47,7 +48,7 @@ def full_conv_network():
     )
 
 
-def shared_conv_network():
+def shared_conv_network(last_activation: nn.Module):
     return nn.Sequential(
         ViewModule(-1, 1, 14, 14),
         nn.Conv2d(1, 32, (5, 5)),
@@ -56,8 +57,10 @@ def shared_conv_network():
         nn.Conv2d(32, 64, (5, 5)),
         nn.ReLU(),
         nn.Flatten(),
-        nn.Linear(64, 10),
+        nn.Linear(64, 50),
         nn.ReLU(),
+        nn.Linear(50, 10),
+        last_activation,
     )
 
 
@@ -72,4 +75,4 @@ class WeightShareModel(nn.Module):
         hidden_b = self.input_module(input[:, 1])
 
         hidden = torch.stack([hidden_a, hidden_b], dim=1)
-        return self.output_module(hidden)
+        return self.output_module(hidden), hidden_a, hidden_b
