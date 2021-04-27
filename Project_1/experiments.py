@@ -18,6 +18,7 @@ class Experiment:
     build_aux_loss: Optional[Callable[[], nn.Module]] = None
 
     expand_factor: int = 1
+    expand_flip: bool = False
 
     def build(self):
         return self.build_model(), self.build_loss(), None if self.build_aux_loss is None else self.build_aux_loss()
@@ -44,7 +45,17 @@ EXPERIMENT_DENSE_NLL = Experiment(
 EXPERIMENT_DENSE_EXPAND = Experiment(
     name="Dense, Expanded",
     epochs=50,
-    expand_factor=10,
+    expand_factor=2,
+
+    build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
+
+    build_loss=lambda: nn.BCELoss(),
+)
+
+EXPERIMENT_DENSE_EXPAND_FLIP = Experiment(
+    name="Dense, Expanded Flipped",
+    epochs=50,
+    expand_flip=True,
 
     build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
 
@@ -116,6 +127,7 @@ EXPERIMENTS = [
     EXPERIMENT_DENSE_MSE,
     EXPERIMENT_DENSE_NLL,
     EXPERIMENT_DENSE_EXPAND,
+    EXPERIMENT_DENSE_EXPAND_FLIP,
     EXPERIMENT_DENSE_SHARE,
     EXPERIMENT_DENSE_SHARE_AUX,
     EXPERIMENT_CONV,

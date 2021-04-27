@@ -92,7 +92,10 @@ def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_los
         print(f"Round {round}/{rounds}")
 
         data = load_data(data_size)
-        data.expand_train_data(factor=experiment.expand_factor)
+        if experiment.expand_flip:
+            data.expand_train_flip()
+        data.expand_train_transform(factor=experiment.expand_factor)
+        data.shuffle_train()
         data.to(DEVICE)
 
         model, loss_func, aux_loss_func = experiment.build()
@@ -156,7 +159,7 @@ def main():
     os.makedirs("output", exist_ok=True)
 
     rounds: int = 10
-    data_size: int = 1_000
+    data_size: int = 1000
     plot_loss: bool = False
 
     for ei, exp in enumerate(EXPERIMENTS):

@@ -9,7 +9,7 @@ def main():
     cols = 10
 
     data = load_data(rows)
-    data.expand_train_data(cols, shuffle=False)
+    data.expand_train_transform(cols, shuffle=False)
 
     fig = pyplot.figure()
     grid = ImageGrid(fig, 111, (rows, cols))

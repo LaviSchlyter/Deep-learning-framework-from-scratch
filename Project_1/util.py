@@ -39,9 +39,15 @@ class Data:
             if isinstance(value, torch.Tensor):
                 setattr(self, field.name, value.to(device))
 
-    def expand_train_data(self, factor: int, shuffle = True):
+    def expand_train_flip(self):
+        self.train_x = torch.cat([self.train_x, self.train_x.flip(1)])
+        self.train_y = torch.cat([self.train_y, 1 - self.train_y])
+        self.train_y_float = torch.cat([self.train_y_float, 1 - self.train_y_float])
+        self.train_digit = torch.cat([self.train_digit, self.train_digit.flip(1)])
+
+    def expand_train_transform(self, factor: int, shuffle=True):
         assert factor >= 1
-        transform = RandomAffine(degrees=30, shear=20, interpolation=InterpolationMode.BILINEAR)
+        transform = RandomAffine(degrees=10, shear=20, interpolation=InterpolationMode.BILINEAR)
 
         self.train_size *= factor
 
@@ -52,18 +58,18 @@ class Data:
         self.train_y_float = self.train_y_float.repeat(factor)
         self.train_digit = self.train_digit.repeat(factor, 1)
 
-        if shuffle:
-            perm = torch.randperm(len(self.train_x))
-            self.train_x = self.train_x[perm]
-            self.train_y = self.train_y[perm]
-            self.train_y_float = self.train_y_float[perm]
-            self.train_digit = self.train_digit[perm]
+    def shuffle_train(self):
+        perm = torch.randperm(len(self.train_x))
+        self.train_x = self.train_x[perm]
+        self.train_y = self.train_y[perm]
+        self.train_y_float = self.train_y_float[perm]
+        self.train_digit = self.train_digit[perm]
 
 
 def load_data(data_size) -> Data:
     train_x, train_y, train_digit, test_x, test_y, test_digit = generate_pair_sets(data_size)
     data = Data(
         train_x=train_x, train_y=train_y, train_y_float=train_y.float(), train_digit=train_digit, train_size=data_size,
-        test_x=test_x, test_y=test_y, test_y_float=test_y.float(), test_digit=test_digit, test_size = data_size,
+        test_x=test_x, test_y=test_y, test_y_float=test_y.float(), test_digit=test_digit, test_size=data_size,
     )
     return data
