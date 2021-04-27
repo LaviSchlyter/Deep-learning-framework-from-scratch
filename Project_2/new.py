@@ -4,7 +4,8 @@ from abc import abstractmethod
 import torch
 
 
-# TODO Adam
+
+
 # TODO Make an exponential GradFN with overloaded division, sum and multiplication
 # TODO why better with normalizing when circle
 # TODO try weight sharing // Try the sum of Tensor // or try concatenation
@@ -73,6 +74,10 @@ class Tensor:
 
     def zero_grad(self):
         self.grad = torch.zeros_like(self.value)
+
+
+    def __getitem__(self, item):
+        return self.value[:, item]
 
     @property
     def shape(self):
@@ -221,16 +226,17 @@ class Adam(Optim):
         self.alpha = alpha
 
     def step(self):
-        m = 0
-        v = 0
+        m = [0] * len(self.params)
+        v = [0] * len(self.params)
 
-        for param in self.params:
+
+        for i, param in enumerate(self.params):
             # gt = param.grad
-            m = self.beta1 * m + (1 - self.beta1) * param.grad
-            v = self.beta2 * v + (1 - self.beta2) * param.grad ** 2
-            m_hat = m / (1 - self.beta1)
-            v_hat = v / (1 - self.beta2)
-            param.value -= self.alpha * m_hat / (math.sqrt(v_hat) + self.epsilon)
+            m[i] = self.beta1 * m[i] + (1 - self.beta1) * param.grad
+            v[i] = self.beta2 * v[i] + (1 - self.beta2) * param.grad ** 2
+            m_hat = m[i] / (1 - self.beta1)
+            v_hat = v[i] / (1 - self.beta2)
+            param.value -= self.alpha * m_hat/(torch.sqrt(v_hat) + self.epsilon)
 
 
 class SGD(Optim):
@@ -245,6 +251,7 @@ class SGD(Optim):
 
     def step(self):
         for param in self.params:
+
             param.value -= self.lr * param.grad
 
 
@@ -289,10 +296,10 @@ def main():
     torch.set_grad_enabled(False)
     #torch.manual_seed(19)
 
-    model = Sequential([Linear(2, 25), Relu(), Linear(25,20), Relu(), Linear(20, 1), Sigmoid()])
+    model = Sequential([Linear(2, 50), Relu(), Linear(50, 25), Relu(), Linear(25, 10), Relu(), Linear(10,1), Sigmoid()])
 
     # Generate the set of size n
-    n = 5000
+    n = 300
     train_input, train_target = generate_disc_set(n)
     test_input, test_target = generate_disc_set(n)
 
@@ -307,11 +314,12 @@ def main():
     plt.show()
 
     loss = LossMSE()
-    criterion = SGD(model.param(), 5/n)
+    criterion = Adam(model.param())
+    #criterion = SGD(model.param(), 0.05/n)
 
-    epoch = 1000
+    epoch = 100
     plot_data = torch.zeros(epoch, 4)
-    plot_legend = "train_loss", "train_error", "test_loss", "test_error"
+    plot_legend = "train_error",  "test_error"
     for e in range(epoch):
         criterion.zero_grad()
 
@@ -327,32 +335,22 @@ def main():
         error_test = evaluate(y_test, test_target)
 
         # Save values for data plotting
-        plot_data[e, :] = torch.tensor([cost_train.value, error_train, cost_test.value, error_test])
+        plot_data[e, :] = torch.tensor([error_train, error_test, cost_train.value/n, cost_test.value/n])
 
         cost_train.backward()
-        # print(train_input.value[0:5, :])
-        # print(train_input.grad[0:5, :])
-        # print(train_input.grad.shape)
-
-        wrong_index = ((y_train.value > 0.5) != (train_target.value > 0.5)).nonzero()
-
-        i = wrong_index[0, 0]
-
-        print("input & grad")
-        print(train_input.value[i:i+4])
-        print(train_input.grad[i:i+4])
-        print(train_mask[i:i+4])
-        print(y_train.value[i:i+4])
-
-
         criterion.step()
         #print(f"For epoch = {e} with MSE loss = {cost.value}")
 
 
     y_test = model(test_input)
 
-    plt.plot(plot_data[:,0])
-    plt.savefig("test.png")
+    plt.plot(plot_data[:,0], label = "train_error")
+    plt.plot(plot_data[:,1], label = "test_error")
+    plt.plot(plot_data[:, 2], label="train_cost")
+    plt.plot(plot_data[:, 3], label="test_cost")
+    plt.legend()
+
+
     plt.show()
     print("test error", evaluate(y_test, test_target))
 
