@@ -2,16 +2,7 @@ import math
 from abc import abstractmethod
 
 import torch
-
-
-
-
-# TODO Make an exponential GradFN with overloaded division, sum and multiplication
-# TODO why better with normalizing when circle
-# TODO try weight sharing // Try the sum of Tensor // or try concatenation
-
 from matplotlib import pyplot as plt
-
 
 class Module:
 
@@ -77,7 +68,12 @@ class Tensor:
 
 
     def __getitem__(self, item):
-        return self.value[:, item]
+        if isinstance(item, int):
+            item = slice(item,item+1)
+        return Tensor(self.value[:, item], grad_fn= SliceGradFn(self, item))
+
+    def cat(self, tensor):
+        return Tensor(torch.cat((self.value, tensor.value), 1), grad_fn= CatGradFn(self, tensor))
 
     @property
     def shape(self):
@@ -149,6 +145,31 @@ class Relu(Module):
 
 
 # GradFN
+
+class SliceGradFn:
+    def __init__(self, input_, item):
+        self.input_ = input_
+        self.item = item
+
+    def backward(self, output_grad):
+        input_grad = torch.zeros_like(self.input_.value)
+        input_grad[:, self.item] = output_grad
+        self.input_.backward(input_grad)
+
+
+
+class CatGradFn:
+    def __init__(self, input1, input2):
+        self.input1 = input1
+        self.input2 = input2
+
+    def backward(self, output_grad):
+        input_grad_1 = output_grad[:,:(self.input1.shape[1])]
+        input_grad_2 = output_grad[:, (self.input1.shape[1]):]
+        self.input1.backward(input_grad_1)
+        self.input2.backward(input_grad_2)
+
+
 class LinearGradFn:
     def __init__(self, input_, W, b):
         self.b = b
@@ -169,9 +190,9 @@ class ReluGradFn:
         self.input_ = input_
 
     def backward(self, output_grad):
-        input__grad = output_grad * (self.input_.value > 0)
-        self.input_.backward(input__grad)
-        #self.input_.grad += input__grad
+        input_grad = output_grad * (self.input_.value > 0)
+        self.input_.backward(input_grad)
+        #self.input_.grad += input_grad
 
 
 
@@ -182,8 +203,8 @@ class SigmoidGradFn:
 
     def backward(self, output_grad):
         output = Sigmoid.sigmoid(self.input_.value)
-        input__grad = output_grad * output * (1 - output)
-        self.input_.backward(input__grad)
+        input_grad = output_grad * output * (1 - output)
+        self.input_.backward(input_grad)
 
 
 class TanhGradFn:
@@ -192,10 +213,10 @@ class TanhGradFn:
         self.input_ = input_
 
     def backward(self, output_grad):
-        input__grad = output_grad * (1 - pow(self.input_.value, 2))
-        self.input_.backward(input__grad)
-        self.input_.grad += input__grad
-        return input__grad
+        input_grad = output_grad * (1 - pow(self.input_.value, 2))
+        self.input_.backward(input_grad)
+        self.input_.grad += input_grad
+        return input_grad
 
 
 # Optimizers (SGD, Adam)
@@ -278,9 +299,9 @@ class LossMSEGradFN:
         self.input_ = input_
 
     def backward(self, output_grad):
-        input__grad = (self.input_.value - self.target.value) * output_grad
-        self.input_.backward(input__grad)
-        self.target.backward(-input__grad)
+        input_grad = (self.input_.value - self.target.value) * output_grad
+        self.input_.backward(input_grad)
+        self.target.backward(-input_grad)
 
 
 
@@ -296,10 +317,11 @@ def main():
     torch.set_grad_enabled(False)
     #torch.manual_seed(19)
 
-    model = Sequential([Linear(2, 50), Relu(), Linear(50, 25), Relu(), Linear(25, 10), Relu(), Linear(10,1), Sigmoid()])
+    model = Sequential([Linear(1, 50), Relu(), Linear(50, 25), Relu(), Linear(25, 1), Relu()])
+    model_ = Sequential([Linear(2*1, 50), Relu(), Linear(50, 25), Relu(), Linear(25, 1), Sigmoid()])
 
     # Generate the set of size n
-    n = 300
+    n = 1000
     train_input, train_target = generate_disc_set(n)
     test_input, test_target = generate_disc_set(n)
 
@@ -308,29 +330,43 @@ def main():
     train_input.value.sub_(mean).div_(std)
     test_input.value.sub_(mean).div_(std)
 
+    train_input_x = train_input[0]
+    train_input_y = train_input[1]
+    test_input_x = test_input[0]
+    test_input_y = test_input[1]
+
     train_mask = train_target.value[:, 0] > 0.5
     plt.scatter(train_input.value[train_mask, 0], train_input.value[train_mask, 1])
     plt.scatter(train_input.value[~train_mask, 0], train_input.value[~train_mask, 1])
     plt.show()
 
     loss = LossMSE()
-    criterion = Adam(model.param())
+    criterion = Adam(model.param() + model_.param())
     #criterion = SGD(model.param(), 0.05/n)
 
-    epoch = 100
+    epoch = 500
     plot_data = torch.zeros(epoch, 4)
     plot_legend = "train_error",  "test_error"
     for e in range(epoch):
+
         criterion.zero_grad()
 
         # Train evaluation
 
-        y_train = model(train_input)
+        y_train_x = model(train_input_x)
+        y_train_y = model(train_input_y)
+
+        y_train = model_(y_train_x.cat(y_train_y))
+
         cost_train = loss(y_train, train_target)
         error_train = evaluate(y_train, train_target)
 
         # Test evaluation
-        y_test = model(test_input)
+        y_test_x = model(test_input_x)
+        y_test_y = model(test_input_y)
+
+        y_test = model_(y_test_x.cat(y_test_y))
+        #y_test = model(test_input)
         cost_test = loss(y_test, test_target)
         error_test = evaluate(y_test, test_target)
 
@@ -342,7 +378,7 @@ def main():
         #print(f"For epoch = {e} with MSE loss = {cost.value}")
 
 
-    y_test = model(test_input)
+
 
     plt.plot(plot_data[:,0], label = "train_error")
     plt.plot(plot_data[:,1], label = "test_error")
@@ -354,7 +390,7 @@ def main():
     plt.show()
     print("test error", evaluate(y_test, test_target))
 
-    y_train = model(train_input)
+
     print("train error: ",evaluate(y_train, train_target))
 
 
