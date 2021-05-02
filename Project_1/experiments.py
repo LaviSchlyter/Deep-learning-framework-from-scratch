@@ -3,7 +3,7 @@ from typing import Callable, Optional
 
 from torch import nn
 
-from models import dense_network, WeightShareModel, full_conv_network, shared_conv_network
+from models import dense_network, WeightShareModel, full_conv_network, shared_conv_network, ProbOutputLayer
 
 
 @dataclass
@@ -33,7 +33,7 @@ EXPERIMENT_DENSE_MSE = Experiment(
     build_loss=lambda: nn.BCELoss(),
 )
 
-EXPERIMENT_DENSE_NLL = Experiment(
+EXPERIMENT_DENSE_BCE = Experiment(
     name="Dense BCE",
     epochs=50,
 
@@ -74,6 +74,18 @@ EXPERIMENT_DENSE_SHARE = Experiment(
     build_loss=lambda: nn.BCELoss(),
 )
 
+EXPERIMENT_DENSE_SHARE_PROB = Experiment(
+    name="Shared Dense + Dense, Prob",
+    epochs=100,
+
+    build_model=lambda: WeightShareModel(
+        dense_network([14 * 14, 255, 50, 10], nn.ReLU(), nn.Sigmoid()),
+        ProbOutputLayer(),
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+)
+
 EXPERIMENT_DENSE_SHARE_AUX = Experiment(
     name="Shared Dense + Dense, Aux",
     epochs=1000,
@@ -88,9 +100,24 @@ EXPERIMENT_DENSE_SHARE_AUX = Experiment(
     build_aux_loss=lambda: nn.NLLLoss(),
 )
 
+
+EXPERIMENT_DENSE_SHARE_AUX_PROB = Experiment(
+    name="Shared Dense + Dense, Aux, Prob",
+    epochs=150,
+
+    build_model=lambda: WeightShareModel(
+        dense_network([14 * 14, 255, 50, 10], nn.ReLU(), nn.Softmax()),
+        ProbOutputLayer(),
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=1.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+)
+
 EXPERIMENT_CONV = Experiment(
     name="Conv",
-    epochs=100,
+    epochs=10,
 
     build_model=lambda: full_conv_network(),
 
@@ -115,7 +142,7 @@ EXPERIMENT_CONV_SHARED_AUX = Experiment(
 
     build_model=lambda: WeightShareModel(
         shared_conv_network(nn.Softmax()),
-        dense_network([20, 1], None, nn.Sigmoid())
+        dense_network([20, 20, 1], None, nn.Sigmoid())
     ),
 
     build_loss=lambda: nn.BCELoss(),
@@ -125,11 +152,13 @@ EXPERIMENT_CONV_SHARED_AUX = Experiment(
 
 EXPERIMENTS = [
     EXPERIMENT_DENSE_MSE,
-    EXPERIMENT_DENSE_NLL,
+    EXPERIMENT_DENSE_BCE,
     EXPERIMENT_DENSE_EXPAND,
     EXPERIMENT_DENSE_EXPAND_FLIP,
     EXPERIMENT_DENSE_SHARE,
+    EXPERIMENT_DENSE_SHARE_PROB,
     EXPERIMENT_DENSE_SHARE_AUX,
+    EXPERIMENT_DENSE_SHARE_AUX_PROB,
     EXPERIMENT_CONV,
     EXPERIMENT_CONV_SHARED,
     EXPERIMENT_CONV_SHARED_AUX

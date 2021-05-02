@@ -69,14 +69,39 @@ def shared_conv_network(last_activation: nn.Module):
 
 
 class WeightShareModel(nn.Module):
-    def __init__(self, input_module: nn.Module, output_module: nn.Module):
+    def __init__(self, input_module: nn.Module, output_head: nn.Module, digit_head: Optional[nn.Module] = None):
         super().__init__()
+
         self.input_module = input_module
-        self.output_module = output_module
+        self.digit_head = digit_head
+        self.output_head = output_head
 
     def forward(self, input):
         hidden_a = self.input_module(input[:, 0])
         hidden_b = self.input_module(input[:, 1])
 
         hidden = torch.stack([hidden_a, hidden_b], dim=1)
-        return self.output_module(hidden), hidden_a, hidden_b
+        output = self.output_head(hidden)
+
+        if self.digit_head:
+            hidden_a = self.digit_head(hidden_a)
+            hidden_b = self.digit_head(hidden_b)
+
+        return output, hidden_a, hidden_b
+
+
+# TODO use a generic "outer product layer" followed by a linear layer instead
+class ProbOutputLayer(nn.Module):
+    def forward(self, input):
+        eq_mask = torch.eye(10)[None, :, :].to(input.device)
+        lt_mask = torch.ones(10, 10).triu()[None, :, :].to(input.device)
+
+        prob_a = input[:, 0, :, None]
+        prob_b = input[:, 1, None, :]
+
+        prob = prob_a * prob_b
+        prob_eq = (eq_mask * prob).sum(axis=(1, 2))
+        prob_lte = (lt_mask * prob).sum(axis=(1, 2))
+
+        prob_lt = (prob_lte - prob_eq) / (1 - prob_eq)
+        return prob_lt[:, None].clamp(0, 1)
