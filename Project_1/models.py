@@ -49,7 +49,7 @@ def full_conv_network():
     )
 
 
-def shared_conv_network(last_activation: nn.Module):
+def shared_conv_network(last_activation: nn.Module, output_size: int):
     return nn.Sequential(
         ViewModule(-1, 1, 14, 14),
         nn.Conv2d(1, 32, (5, 5)),
@@ -63,7 +63,7 @@ def shared_conv_network(last_activation: nn.Module):
         nn.Linear(64, 50),
         nn.ReLU(),
         nn.BatchNorm1d(50),
-        nn.Linear(50, 10),
+        nn.Linear(50, output_size),
         last_activation,
     )
 
