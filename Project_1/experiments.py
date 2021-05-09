@@ -30,7 +30,7 @@ EXPERIMENT_DENSE_MSE = Experiment(
 
     build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
 
-    build_loss=lambda: nn.BCELoss(),
+    build_loss=lambda: nn.MSELoss(),
 )
 
 EXPERIMENT_DENSE_BCE = Experiment(
@@ -116,7 +116,7 @@ EXPERIMENT_DENSE_SHARE_AUX_PROB = Experiment(
 
 EXPERIMENT_CONV = Experiment(
     name="Conv",
-    epochs=10,
+    epochs=1000,
 
     build_model=lambda: full_conv_network(),
 
@@ -128,7 +128,7 @@ EXPERIMENT_CONV_SHARED = Experiment(
     epochs=1000,
 
     build_model=lambda: WeightShareModel(
-        shared_conv_network(nn.Softmax()),
+        shared_conv_network(nn.Softmax(), output_size=20),
         dense_network([20, 1], None, nn.Sigmoid())
     ),
 
@@ -151,11 +151,11 @@ EXPERIMENT_CONV_SHARED_AUX = Experiment(
 
 EXPERIMENT_CONV_SHARED_AUX_HEAD = Experiment(
     name="Shared Conv + Dense, Aux, Head",
-    epochs=1000,
+    epochs=200,
 
     build_model=lambda: WeightShareModel(
         shared_conv_network(nn.Softmax(), output_size=10),
-        output_head=dense_network([20, 1], nn.ReLU(), nn.Sigmoid()),
+        output_head=dense_network([20, 20, 1], nn.ReLU(), nn.Sigmoid()),
         digit_head=dense_network([10, 10], nn.ReLU(), nn.Sigmoid())
     ),
 
@@ -166,7 +166,7 @@ EXPERIMENT_CONV_SHARED_AUX_HEAD = Experiment(
 
 EXPERIMENT_CONV_SHARED_AUX_HEAD_BIGGER = Experiment(
     name="Shared Conv + Dense, Aux, Head bigger",
-    epochs=1000,
+    epochs=200,
 
     build_model=lambda: WeightShareModel(
         shared_conv_network(nn.Softmax(), output_size=20),
