@@ -18,7 +18,7 @@ def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_los
     for round in range(rounds):
         print(f"Round {round}/{rounds}")
 
-        data = load_data(data_size)
+        data = load_data(data_size, experiment.input_normalization)
         if experiment.expand_flip:
             data.expand_train_flip()
         data.expand_train_transform(factor=experiment.expand_factor)

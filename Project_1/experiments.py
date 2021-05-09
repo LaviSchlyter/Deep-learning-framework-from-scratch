@@ -4,6 +4,7 @@ from typing import Callable, Optional
 from torch import nn
 
 from models import dense_network, WeightShareModel, full_conv_network, shared_conv_network, ProbOutputLayer
+from util import InputNormalization
 
 
 @dataclass
@@ -19,6 +20,7 @@ class Experiment:
 
     expand_factor: int = 1
     expand_flip: bool = False
+    input_normalization: InputNormalization = InputNormalization.No
 
     def build(self):
         return self.build_model(), self.build_loss(), None if self.build_aux_loss is None else self.build_aux_loss()
@@ -38,8 +40,27 @@ EXPERIMENT_DENSE_BCE = Experiment(
     epochs=50,
 
     build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
-
     build_loss=lambda: nn.BCELoss(),
+)
+
+EXPERIMENT_DENSE_INPUT_NORM_ELE = Experiment(
+    name="Dense, norm elementwise",
+    epochs=50,
+
+    build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
+    build_loss=lambda: nn.BCELoss(),
+
+    input_normalization=InputNormalization.ElementWise,
+)
+
+EXPERIMENT_DENSE_INPUT_NORM_TOTAL = Experiment(
+    name="Dense, norm total",
+    epochs=50,
+
+    build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
+    build_loss=lambda: nn.BCELoss(),
+
+    input_normalization=InputNormalization.Total,
 )
 
 EXPERIMENT_DENSE_EXPAND = Experiment(
@@ -180,16 +201,18 @@ EXPERIMENT_CONV_SHARED_AUX_HEAD_BIGGER = Experiment(
 )
 
 EXPERIMENTS = [
-    EXPERIMENT_DENSE_MSE,
+    # EXPERIMENT_DENSE_MSE,
     EXPERIMENT_DENSE_BCE,
-    EXPERIMENT_DENSE_EXPAND,
-    EXPERIMENT_DENSE_EXPAND_FLIP,
-    EXPERIMENT_DENSE_SHARE,
-    EXPERIMENT_DENSE_SHARE_PROB,
-    EXPERIMENT_DENSE_SHARE_AUX,
-    EXPERIMENT_DENSE_SHARE_AUX_PROB,
-    EXPERIMENT_CONV,
-    EXPERIMENT_CONV_SHARED,
-    EXPERIMENT_CONV_SHARED_AUX,
-    EXPERIMENT_CONV_SHARED_AUX_HEAD,
+    EXPERIMENT_DENSE_INPUT_NORM_ELE,
+    EXPERIMENT_DENSE_INPUT_NORM_TOTAL,
+    # EXPERIMENT_DENSE_EXPAND,
+    # EXPERIMENT_DENSE_EXPAND_FLIP,
+    # EXPERIMENT_DENSE_SHARE,
+    # EXPERIMENT_DENSE_SHARE_PROB,
+    # EXPERIMENT_DENSE_SHARE_AUX,
+    # EXPERIMENT_DENSE_SHARE_AUX_PROB,
+    # EXPERIMENT_CONV,
+    # EXPERIMENT_CONV_SHARED,
+    # EXPERIMENT_CONV_SHARED_AUX,
+    # EXPERIMENT_CONV_SHARED_AUX_HEAD,
 ]
