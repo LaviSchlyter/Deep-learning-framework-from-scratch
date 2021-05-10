@@ -23,6 +23,8 @@ class Experiment:
     expand_flip: bool = False
     input_normalization: InputNormalization = InputNormalization.No
 
+    batch_size: int = -1
+
     def build(self):
         return self.build_model(), self.build_loss(), None if self.build_aux_loss is None else self.build_aux_loss()
 
@@ -42,6 +44,16 @@ EXPERIMENT_DENSE_BCE = Experiment(
 
     build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
     build_loss=lambda: nn.BCELoss(),
+)
+
+EXPERIMENT_DENSE_BCE_BATCHED = Experiment(
+    name="Dense BCE, batched",
+    epochs=50,
+
+    build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
+    build_loss=lambda: nn.BCELoss(),
+
+    batch_size=100,
 )
 
 EXPERIMENT_DENSE_INPUT_NORM_ELE = Experiment(
@@ -217,7 +229,7 @@ EXPERIMENT_RESNET = Experiment(
 
 EXPERIMENT_RESNET_RESLESS = Experiment(
     name="Resnet resless, Shared, Aux",
-    epochs=200,
+    epochs=150,
 
     build_model=lambda: WeightShareModel(
         shared_resnet(output_size=10, res=False),
@@ -229,9 +241,25 @@ EXPERIMENT_RESNET_RESLESS = Experiment(
     build_aux_loss=lambda: nn.NLLLoss(),
 )
 
+EXPERIMENT_RESNET_RESLESS_BATCHED = Experiment(
+    name="Resnet resless, Shared, Aux, Batched",
+    epochs=150,
+
+    build_model=lambda: WeightShareModel(
+        shared_resnet(output_size=10, res=False),
+        output_head=dense_network([20, 20, 1], nn.ReLU(), nn.Sigmoid()),
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=1.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+    batch_size=100
+)
+
 EXPERIMENTS = [
     # EXPERIMENT_DENSE_MSE,
     # EXPERIMENT_DENSE_BCE,
+    # EXPERIMENT_DENSE_BCE_BATCHED,
     # EXPERIMENT_DENSE_INPUT_NORM_ELE,
     # EXPERIMENT_DENSE_INPUT_NORM_TOTAL,
     # EXPERIMENT_DENSE_EXPAND,
@@ -242,9 +270,10 @@ EXPERIMENTS = [
     # EXPERIMENT_DENSE_SHARE_AUX_PROB,
     # EXPERIMENT_CONV,
     # EXPERIMENT_CONV_SHARED,
-    EXPERIMENT_CONV_SHARED_AUX,
+    # EXPERIMENT_CONV_SHARED_AUX,
     # EXPERIMENT_CONV_SHARED_AUX_HEAD,
 
-    EXPERIMENT_RESNET,
+    # EXPERIMENT_RESNET,
     EXPERIMENT_RESNET_RESLESS,
+    EXPERIMENT_RESNET_RESLESS_BATCHED,
 ]

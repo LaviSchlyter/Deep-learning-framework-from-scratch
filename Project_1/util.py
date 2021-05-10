@@ -21,6 +21,9 @@ def select_device(debug_on_cpu: bool):
     return device
 
 
+DEVICE = select_device(debug_on_cpu=True)
+
+
 @dataclass
 class Data:
     train_size: int

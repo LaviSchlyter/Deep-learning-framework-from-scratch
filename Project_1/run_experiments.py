@@ -7,9 +7,7 @@ from torch import optim
 
 from core import train_model
 from experiments import EXPERIMENTS, Experiment
-from util import select_device, load_data
-
-DEVICE = select_device(debug_on_cpu=True)
+from util import load_data, DEVICE
 
 
 def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_loss: bool):
@@ -17,7 +15,7 @@ def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_los
     plot_legend = None
 
     for round in range(rounds):
-        print(f"Round {round}/{rounds}")
+        print(f"Round {round + 1}/{rounds}")
 
         data = load_data(data_size, experiment.input_normalization)
         if experiment.expand_flip:
@@ -38,7 +36,7 @@ def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_los
         plot_data, plot_legend = train_model(
             model=model, optimizer=optimizer, loss_func=loss_func, data=data,
             aux_loss_func=aux_loss_func, aux_weight=experiment.aux_weight,
-            epochs=experiment.epochs
+            epochs=experiment.epochs, batch_size=experiment.batch_size
         )
 
         if all_plot_data is None:
@@ -91,12 +89,12 @@ def main():
     print(f"Running on device {DEVICE}")
     os.makedirs("output", exist_ok=True)
 
-    rounds: int = 10
+    rounds: int = 3
     data_size: int = 1000
     plot_loss: bool = False
 
     for ei, exp in enumerate(EXPERIMENTS):
-        print(f"Running experiment {ei}/{len(EXPERIMENTS)}: {exp.name}")
+        print(f"Running experiment {ei + 1}/{len(EXPERIMENTS)}: {exp.name}")
         run_experiment(exp, data_size, rounds, plot_loss)
 
 
