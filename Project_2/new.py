@@ -1,355 +1,15 @@
-import math
-from abc import abstractmethod
-
 # Implementation of Autograd
-import torch
+import seaborn as sns
 from matplotlib import pyplot as plt
 
-
 # TODO remove plt and other libraries before handing
-# TODO How to make this without torch.tensor
 # TODO Add a gradient tester
 # TODO Organize the files
 # TODO Add an optimizer
-# TODO Check with Karel assistant message on Slack
-
-
-class Module:
-
-    @abstractmethod
-    def __call__(self, input_):
-        pass
-
-    @abstractmethod
-    def param(self):
-        pass
-
-
-class Sequential:
-    def __init__(self, layers):
-        self.layers = layers
-
-    def __call__(self, input_):
-        self.intermediates = []
-
-        for layer in self.layers:
-            self.intermediates.append(input_)
-            input_ = layer(input_)
-
-        self.intermediates.append(input_)
-
-        return input_
-
-    def param(self):
-        par = []
-        for layer in self.layers:
-            par.extend(layer.param())
-
-        return par
-
-
-# Tensor
-class Tensor:
-
-    def __init__(self, value, grad_fn=None):
-
-        assert not isinstance(value, Tensor)
-        self.value = value
-        self.grad = zeros_like(value)
-        self.grad_fn = grad_fn
-
-    def backward(self, output_grad=None):
-
-        if output_grad is None:
-            output_grad = ones_like(self.value)
-        if self.grad_fn is not None:
-            self.grad_fn.backward(output_grad)
-
-        self.grad += output_grad
-
-    def zero_grad(self):
-        self.grad = zeros_like(self.value)
-
-    def __getitem__(self, item):
-        if isinstance(item, int):
-            item = slice(item, item + 1)
-        return Tensor(self.value[:, item], grad_fn=SliceGradFn(self, item))
-
-    def cat(self, tensor):
-
-        size_cat = [self.value.shape[0], self.value.shape[1] + tensor.value.shape[1]]
-        concat = torch.empty(size_cat)
-        concat[:, 0] = self.value[:, 0]
-        concat[:, 1] = tensor.value[:, 0]
-
-        return Tensor(concat, grad_fn=CatGradFn(self, tensor))
-
-    @property
-    def shape(self):
-        return self.value.shape
-
-
-def zeros_like(tensor):
-    return torch.empty(tensor.shape).zero_()
-
-
-def ones_like(tensor):
-    return zeros_like(tensor) + 1
-
-
-# Layers
-
-class Linear(Module):
-
-    def __init__(self, Din, Dout):
-        self.W = Tensor(torch.empty([Din, Dout]).uniform_() * (2 / math.sqrt(Din)) - 1 / math.sqrt(Din))
-        # self.W = Tensor(torch.rand([Din, Dout]) * (2/math.sqrt(Din)) - 1/math.sqrt(Din))
-        self.b = Tensor(torch.empty([Dout]).uniform_())
-        # self.b = Tensor(torch.rand(([Dout])))
-
-    def __call__(self, input_):
-        # Takes input_ of shape NxD and W of DxM
-        return Tensor(input_.value @ self.W.value + self.b.value, grad_fn=LinearGradFn(input_, self.W, self.b))
-
-    def param(self):
-        return [self.W, self.b]
-
-
-class Tanh(Module):
-
-    def __call__(self, input_):
-        return Tensor(
-            value=2 * Sigmoid.sigmoid(input_.value) - 1,
-            grad_fn=TanhGradFn(input_)
-        )
-
-    def param(self):
-        return []
-
-
-class Sigmoid(Module):
-
-    def __call__(self, input_):
-        return Tensor(
-            value=Sigmoid.sigmoid(input_.value),
-            grad_fn=SigmoidGradFn(input_)
-        )
-
-    def param(self):
-        return []
-
-    @staticmethod
-    def sigmoid(input_):
-        # return 1 / (1 + torch.exp(-input_))
-        return 1 / (1 + (-input_).exp())
-
-
-class Relu(Module):
-    # alpha is the negative slope, 0 is zero else leaky ReLu
-    def __init__(self, alpha=0.):
-        self.alpha = alpha
-        assert (0 <= alpha < 1)
-
-    def __call__(self, input_):
-        return Tensor(
-            value=input_.value.maximum(input_.value * self.alpha),
-            grad_fn=ReluGradFn(input_, alpha=self.alpha)
-        )
-
-    def param(self):
-        return []
-
-
-# GradFN
-
-class SliceGradFn:
-    def __init__(self, input_, item):
-        self.input_ = input_
-        self.item = item
-
-    def backward(self, output_grad):
-        input_grad = zeros_like(self.input_.value)
-        input_grad[:, self.item] = output_grad
-        self.input_.backward(input_grad)
-
-
-class CatGradFn:
-    def __init__(self, input1, input2):
-        self.input1 = input1
-        self.input2 = input2
-
-    def backward(self, output_grad):
-        input_grad_1 = output_grad[:, :(self.input1.shape[1])]
-        input_grad_2 = output_grad[:, (self.input1.shape[1]):]
-        self.input1.backward(input_grad_1)
-        self.input2.backward(input_grad_2)
-
-
-class LinearGradFn:
-    def __init__(self, input_, W, b):
-        self.b = b
-        self.W = W
-        self.input_ = input_
-
-    def backward(self, output_grad):
-        self.b.backward(output_grad.sum(dim=0))
-        self.W.backward((self.input_.value[:, :, None] @ output_grad[:, None, :]).sum(dim=0))
-
-        input_grad = output_grad @ self.W.value.T
-        self.input_.backward(input_grad)
-
-
-class ReluGradFn:
-
-    def __init__(self, input_, alpha):
-        self.alpha = alpha
-        self.input_ = input_
-
-    def backward(self, output_grad):
-        # TODO does this even work ??
-        input_grad = output_grad * (self.input_.value >= 0) + output_grad * (self.input_.value < 0) * (- self.alpha)
-        self.input_.backward(input_grad)
-
-
-class SigmoidGradFn:
-
-    def __init__(self, input_):
-        self.input_ = input_
-
-    def backward(self, output_grad):
-        output = Sigmoid.sigmoid(self.input_.value)
-        input_grad = output_grad * output * (1 - output)
-        self.input_.backward(input_grad)
-
-
-class TanhGradFn:
-
-    def __init__(self, input_):
-        self.input_ = input_
-
-    def backward(self, output_grad):
-        input_grad = output_grad * (1 - pow(self.input_.value, 2))
-        self.input_.backward(input_grad)
-        self.input_.grad += input_grad
-        return input_grad
-
-
-# Optimizers (SGD, Adam)
-class Optim:
-
-    def __init__(self, params):
-        self.params = params  # model parameters
-
-    def zero_grad(self):
-        for param in self.params:
-            param.zero_grad()
-
-
-class Adam(Optim):
-    def __init__(self, params, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
-        """
-
-        :param params: Parameters that will be updated
-        :param alpha: The learning rate or step size
-        :param beta1: The exponential decay rate for the first moment estimates
-        :param beta2: The exponential decay rate for the second moment estimates
-        :param epsilon: Small value to prevent division by zero
-        """
-        super().__init__(params)
-        self.epsilon = epsilon
-        self.beta2 = beta2
-        self.beta1 = beta1
-        self.alpha = alpha
-
-    def step(self):
-        m = [0] * len(self.params)
-        v = [0] * len(self.params)
-
-        for i, param in enumerate(self.params):
-            # gt = param.grad
-            m[i] = self.beta1 * m[i] + (1 - self.beta1) * param.grad
-            v[i] = self.beta2 * v[i] + (1 - self.beta2) * param.grad ** 2
-            m_hat = m[i] / (1 - self.beta1)
-            v_hat = v[i] / (1 - self.beta2)
-            param.value -= self.alpha * m_hat / (v_hat.sqrt() + self.epsilon)
-
-
-class SGD(Optim):
-    def __init__(self, params, lr):
-        """
-
-        :param params: Parameters that will be updated
-        :param lr: The learning rate
-        """
-        super().__init__(params)
-        self.lr = lr
-
-    def step(self):
-        for param in self.params:
-            param.value -= self.lr * param.grad
-
-
-# Loss functions (MSE, cross entropy)
-
-class LossMSE:
-
-    def __call__(self, input_, target):
-        return Tensor(1 / 2 * ((input_.value - target.value) ** 2).sum(dim=0), grad_fn=LossMSEGradFN(input_, target))
-
-    @staticmethod
-    def param():
-        return []
-
-
-class LossMSEGradFN:
-    def __init__(self, input_, target):
-        self.target = target
-        self.input_ = input_
-
-    def backward(self, output_grad):
-        input_grad = (self.input_.value - self.target.value) * output_grad
-        self.input_.backward(input_grad)
-        self.target.backward(-input_grad)
-
-
-class BCELoss:
-
-    def __call__(self, input_, target):
-        ok = -(target.value * input_.value.log().clamp(-100, float("inf")) + (1 - target.value) * (
-                    1 - input_.value).log().clamp(-100, float("inf"))).sum(dim=0)
-        return Tensor(-(target.value * input_.value.log().clamp(-100, float("inf")) + (1 - target.value) * (
-                    1 - input_.value).log().clamp(-100, float("inf"))).sum(dim=0),
-                      grad_fn=LossBCEGradFN(input_, target))
-
-    @staticmethod
-    def param():
-        return []
-
-
-class LossBCEGradFN:
-
-    def __init__(self, input_, target):
-        self.input_ = input_
-        self.target = target
-
-    # TODO Verify this
-    def backward(self, output_grad):
-        x = self.input_.value
-        y = self.target.value
-        eps = ones_like(x) * 1e-12
-        input_grad = ((x - y) / ((1 - x) * x).maximum(eps)) * output_grad
-        self.input_.backward(input_grad)
-        self.target.backward((-x.log() + (1 - x).log()) * output_grad)
-
-
-def generate_disc_set(nb):
-    input_ = torch.empty(nb, 2).uniform_()
-    target = ((input_ - 0.5).pow(2).sum(1) < 1 / (2 * math.pi)).float()
-    return Tensor(input_), Tensor(target[:, None])
-
-
-def evaluate(pred, target):
-    return 1 - ((pred.value > 0.5) == (target.value > 0.5)).sum() / len(pred.value)
+# TODO plot the ones that are wrongly classified
+# TODO Plot a heatmap of the points
+from Project_2.modules import *
+from Project_2.utils import *
 
 
 def plot_performance(plot_data, plot_legend, print_loss=True):
@@ -358,14 +18,15 @@ def plot_performance(plot_data, plot_legend, print_loss=True):
 
     for i, legend in enumerate(plot_legend):
         plt.plot(plot_data[:, i], label=legend)
+
     plt.legend()
+
     plt.show()
 
 
 def main():
     # Disable the use of autograd from PyTorch
     torch.set_grad_enabled(False)
-    # torch.manual_seed(19)
 
     model = Sequential([Linear(2, 50), Relu(0), Linear(50, 25), Relu(0), Linear(25, 1), Sigmoid()])
     # model_ = Sequential([Linear(2 * 10, 50), Relu(), Linear(50, 25), Relu(), Linear(25, 1), Sigmoid()])
@@ -374,6 +35,7 @@ def main():
     n = 1000
     train_input, train_target = generate_disc_set(n)
     test_input, test_target = generate_disc_set(n)
+
 
     # Normalizing the data set
     mean, std = train_input.value.mean(), train_input.value.std()
@@ -388,9 +50,11 @@ def main():
     train_mask = train_target.value[:, 0] > 0.5
     plt.scatter(train_input.value[train_mask, 0], train_input.value[train_mask, 1])
     plt.scatter(train_input.value[~train_mask, 0], train_input.value[~train_mask, 1])
+    xmin, xmax, ymin, ymax = plt.axis()
+
     plt.show()
 
-    loss = BCELoss()
+    loss = LossBCE()
     criterion = Adam(model.param(), alpha=0.0005)
     # criterion = Adam(model.param() + model_.param())
     # criterion = SGD(model.param(), 0.05/n)
@@ -421,19 +85,42 @@ def main():
         error_test = evaluate(y_test, test_target)
 
         # Save values for data plotting
-        # plot_data[e,:] = [error_train, error_test, cost_train.value / n, cost_test.value / n]
+        plot_data[e, 0] = error_train
+        plot_data[e, 1] = error_test
+        plot_data[e, 2] = cost_train.value / n
+        plot_data[e, 3] = cost_test.value / n
 
-        plot_data[e, :] = torch.tensor([error_train, error_test, cost_train.value / n, cost_test.value / n])
-
+        print(format(
+            f"For epoch = {e} with {type(loss).__name__} \n Training loss = {format(cost_train.value[0], '.4f')}    ,   Test loss = {format(cost_test.value[0], '.4f')}"))
         cost_train.backward()
         criterion.step()
-        # print(f"For epoch = {e} with MSE loss = {cost.value}")
+
+    image_input_x, image_input_y = torch.meshgrid(torch.linspace(xmin, xmax, 1000), torch.linspace(ymin, ymax, 1000))
+    image_input = torch.cat([image_input_x.reshape(-1, 1), image_input_y.reshape(-1, 1)], dim=1)
+
+    image_output = model(Tensor(image_input))
+    import matplotlib
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["orange", "yellow", "blue"])
+    plt.imshow(image_output.value.reshape(-1, 1000), cmap=cmap)
+    # plt.xlim([xmin,xmax])
+    # plt.ylim([ymin, ymax])
+    plt.show()
 
     plot_performance(plot_data, plot_legend, True)
-    print("test error: ", evaluate(y_test, test_target))
-    print("test loss: ", cost_test.value)
-    print("train error: ", evaluate(y_train, train_target))
+    print("Test error: ", evaluate(y_test, test_target))
+    y_test_nu = y_test.value.numpy()
+    sns.heatmap(y_test_nu)
 
+    print("Train error: ", evaluate(y_train, train_target))
+
+    wrong_pred_coordinates = test_input.value[((y_test.value > 0.5) != (test_target.value > 0.5))[:, 0], :]
+    # ok = ((y_test.value > 0.5) != (test_target.value > 0.5))
+    # plt.title("Wrongly predicted")
+    # plt.scatter(wrong_pred_coordinates[:, 0], wrong_pred_coordinates[:,1])
+
+    # plt.xlim([xmin,xmax])
+    # plt.ylim([ymin, ymax])
+    plt.show()
 
 
 if __name__ == '__main__':
