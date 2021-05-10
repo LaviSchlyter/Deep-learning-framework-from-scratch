@@ -13,6 +13,7 @@ class ViewModule(nn.Module):
         return input.view(*self.shape)
 
 
+# TODO this function is getting pretty confusing, maybe just stop using it
 def dense_network(sizes: List[int], activation: Optional[nn.Module], last_activation: nn.Module = None):
     assert len(sizes) >= 0, "Dense network needs at least an input size"
 
@@ -23,7 +24,7 @@ def dense_network(sizes: List[int], activation: Optional[nn.Module], last_activa
     prev_size = sizes[0]
     for i, size in enumerate(sizes[1:]):
         if i != 0:
-            assert activation is not None, f"Networks with sizes {sizes} needs activation function"
+            assert activation is not None, f"Network with sizes {sizes} needs activation function"
             layers.append(activation)
             layers.append(nn.BatchNorm1d(prev_size))
 

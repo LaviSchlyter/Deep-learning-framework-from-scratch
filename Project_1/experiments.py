@@ -15,7 +15,7 @@ class Experiment:
     build_model: Callable[[], nn.Module]
     build_loss: Callable[[], nn.Module]
 
-    aux_weight: float = 0.0
+    aux_weight: float = float("nan")
     build_aux_loss: Optional[Callable[[], nn.Module]] = None
 
     expand_factor: int = 1

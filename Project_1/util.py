@@ -17,6 +17,7 @@ def select_device(debug_on_cpu: bool):
         if gettrace is not None and gettrace() is not None:
             device = "cpu"
 
+    print(f"Using device {device}")
     return device
 
 

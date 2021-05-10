@@ -1,10 +1,13 @@
+import math
+from typing import Optional
+
 import torch
 from torch import nn, optim
 
 from util import Data
 
 
-def evaluate(
+def evaluate_model(
         model: nn.Module,
         x, y, y_float, y_digit,
         loss_func, aux_weight, aux_loss_func
@@ -13,8 +16,8 @@ def evaluate(
 
     output = model(x)
 
-    if aux_weight != 0.0:
-        assert aux_loss_func, "Aux weight != 0 but no aux loss func"
+    if not math.isnan(aux_weight):
+        assert aux_loss_func, "Aux weight is set but no aux loss func given"
 
     if isinstance(output, tuple):
         y_pred, a_pred, b_pred = output
@@ -45,21 +48,21 @@ def evaluate(
 def train_model(
         model: nn.Module,
         optimizer: optim.Optimizer,
-        loss_func: nn.Module, aux_loss_func: nn.Module, aux_weight: float,
+        loss_func: nn.Module, aux_loss_func: Optional[nn.Module], aux_weight: float,
         data: Data, epochs: int
 ):
     plot_data = torch.zeros(epochs, 6)
 
     for e in range(epochs):
         model.train()
-        train_loss, train_acc, train_digit_acc = evaluate(
+        train_loss, train_acc, train_digit_acc = evaluate_model(
             model,
             data.train_x, data.train_y, data.train_y_float, data.train_digit,
             loss_func, aux_weight, aux_loss_func
         )
 
         model.eval()
-        test_loss, test_acc, test_digit_acc = evaluate(
+        test_loss, test_acc, test_digit_acc = evaluate_model(
             model,
             data.test_x, data.test_y, data.test_y_float, data.test_digit,
             loss_func, aux_weight, aux_loss_func
