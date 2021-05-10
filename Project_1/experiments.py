@@ -3,7 +3,9 @@ from typing import Callable, Optional
 
 from torch import nn
 
-from models import dense_network, WeightShareModel, full_conv_network, shared_conv_network, ProbOutputLayer
+from models import dense_network, WeightShareModel, full_conv_network, shared_conv_network, ProbOutputLayer, \
+    shared_resnet
+from util import InputNormalization
 
 
 @dataclass
@@ -14,11 +16,12 @@ class Experiment:
     build_model: Callable[[], nn.Module]
     build_loss: Callable[[], nn.Module]
 
-    aux_weight: float = 0.0
+    aux_weight: float = float("nan")
     build_aux_loss: Optional[Callable[[], nn.Module]] = None
 
     expand_factor: int = 1
     expand_flip: bool = False
+    input_normalization: InputNormalization = InputNormalization.No
 
     def build(self):
         return self.build_model(), self.build_loss(), None if self.build_aux_loss is None else self.build_aux_loss()
@@ -30,7 +33,7 @@ EXPERIMENT_DENSE_MSE = Experiment(
 
     build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
 
-    build_loss=lambda: nn.BCELoss(),
+    build_loss=lambda: nn.MSELoss(),
 )
 
 EXPERIMENT_DENSE_BCE = Experiment(
@@ -38,8 +41,27 @@ EXPERIMENT_DENSE_BCE = Experiment(
     epochs=50,
 
     build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
-
     build_loss=lambda: nn.BCELoss(),
+)
+
+EXPERIMENT_DENSE_INPUT_NORM_ELE = Experiment(
+    name="Dense, norm elementwise",
+    epochs=50,
+
+    build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
+    build_loss=lambda: nn.BCELoss(),
+
+    input_normalization=InputNormalization.ElementWise,
+)
+
+EXPERIMENT_DENSE_INPUT_NORM_TOTAL = Experiment(
+    name="Dense, norm total",
+    epochs=50,
+
+    build_model=lambda: dense_network([2 * 14 * 14, 255, 50, 1], nn.ReLU(), nn.Sigmoid()),
+    build_loss=lambda: nn.BCELoss(),
+
+    input_normalization=InputNormalization.Total,
 )
 
 EXPERIMENT_DENSE_EXPAND = Experiment(
@@ -100,7 +122,6 @@ EXPERIMENT_DENSE_SHARE_AUX = Experiment(
     build_aux_loss=lambda: nn.NLLLoss(),
 )
 
-
 EXPERIMENT_DENSE_SHARE_AUX_PROB = Experiment(
     name="Shared Dense + Dense, Aux, Prob",
     epochs=150,
@@ -117,7 +138,7 @@ EXPERIMENT_DENSE_SHARE_AUX_PROB = Experiment(
 
 EXPERIMENT_CONV = Experiment(
     name="Conv",
-    epochs=10,
+    epochs=1000,
 
     build_model=lambda: full_conv_network(),
 
@@ -129,7 +150,7 @@ EXPERIMENT_CONV_SHARED = Experiment(
     epochs=1000,
 
     build_model=lambda: WeightShareModel(
-        shared_conv_network(nn.Softmax()),
+        shared_conv_network(nn.Softmax(), output_size=20),
         dense_network([20, 1], None, nn.Sigmoid())
     ),
 
@@ -138,11 +159,69 @@ EXPERIMENT_CONV_SHARED = Experiment(
 
 EXPERIMENT_CONV_SHARED_AUX = Experiment(
     name="Shared Conv + Dense, Aux",
-    epochs=1000,
+    epochs=200,
 
     build_model=lambda: WeightShareModel(
-        shared_conv_network(nn.Softmax()),
-        dense_network([20, 20, 1], None, nn.Sigmoid())
+        shared_conv_network(nn.Softmax(), output_size=10),
+        dense_network([20, 20, 1], nn.ReLU(), nn.Sigmoid())
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=1.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+)
+
+EXPERIMENT_CONV_SHARED_AUX_HEAD = Experiment(
+    name="Shared Conv + Dense, Aux, Head",
+    epochs=200,
+
+    build_model=lambda: WeightShareModel(
+        shared_conv_network(nn.Softmax(), output_size=10),
+        output_head=dense_network([20, 20, 1], nn.ReLU(), nn.Sigmoid()),
+        digit_head=dense_network([10, 10], nn.ReLU(), nn.Sigmoid())
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=1.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+)
+
+EXPERIMENT_CONV_SHARED_AUX_HEAD_BIGGER = Experiment(
+    name="Shared Conv + Dense, Aux, Head bigger",
+    epochs=200,
+
+    build_model=lambda: WeightShareModel(
+        shared_conv_network(nn.Softmax(), output_size=20),
+        output_head=dense_network([40, 1], nn.ReLU(), nn.Sigmoid()),
+        digit_head=dense_network([20, 10], nn.ReLU(), nn.Sigmoid())
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=1.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+)
+
+EXPERIMENT_RESNET = Experiment(
+    name="Resnet, Shared, Aux",
+    epochs=200,
+
+    build_model=lambda: WeightShareModel(
+        shared_resnet(output_size=10, res=True),
+        output_head=dense_network([20, 20, 1], nn.ReLU(), nn.Sigmoid()),
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=1.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+)
+
+EXPERIMENT_RESNET_RESLESS = Experiment(
+    name="Resnet resless, Shared, Aux",
+    epochs=200,
+
+    build_model=lambda: WeightShareModel(
+        shared_resnet(output_size=10, res=False),
+        output_head=dense_network([20, 20, 1], nn.ReLU(), nn.Sigmoid()),
     ),
 
     build_loss=lambda: nn.BCELoss(),
@@ -151,15 +230,21 @@ EXPERIMENT_CONV_SHARED_AUX = Experiment(
 )
 
 EXPERIMENTS = [
-    EXPERIMENT_DENSE_MSE,
-    EXPERIMENT_DENSE_BCE,
-    EXPERIMENT_DENSE_EXPAND,
-    EXPERIMENT_DENSE_EXPAND_FLIP,
-    EXPERIMENT_DENSE_SHARE,
-    EXPERIMENT_DENSE_SHARE_PROB,
-    EXPERIMENT_DENSE_SHARE_AUX,
-    EXPERIMENT_DENSE_SHARE_AUX_PROB,
-    EXPERIMENT_CONV,
-    EXPERIMENT_CONV_SHARED,
-    EXPERIMENT_CONV_SHARED_AUX
+    # EXPERIMENT_DENSE_MSE,
+    # EXPERIMENT_DENSE_BCE,
+    # EXPERIMENT_DENSE_INPUT_NORM_ELE,
+    # EXPERIMENT_DENSE_INPUT_NORM_TOTAL,
+    # EXPERIMENT_DENSE_EXPAND,
+    # EXPERIMENT_DENSE_EXPAND_FLIP,
+    # EXPERIMENT_DENSE_SHARE,
+    # EXPERIMENT_DENSE_SHARE_PROB,
+    # EXPERIMENT_DENSE_SHARE_AUX,
+    # EXPERIMENT_DENSE_SHARE_AUX_PROB,
+    # EXPERIMENT_CONV,
+    # EXPERIMENT_CONV_SHARED,
+    EXPERIMENT_CONV_SHARED_AUX,
+    # EXPERIMENT_CONV_SHARED_AUX_HEAD,
+
+    EXPERIMENT_RESNET,
+    EXPERIMENT_RESNET_RESLESS,
 ]
