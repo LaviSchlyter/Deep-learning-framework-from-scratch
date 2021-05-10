@@ -3,7 +3,8 @@ from typing import Callable, Optional
 
 from torch import nn
 
-from models import dense_network, WeightShareModel, full_conv_network, shared_conv_network, ProbOutputLayer
+from models import dense_network, WeightShareModel, full_conv_network, shared_conv_network, ProbOutputLayer, \
+    shared_resnet
 from util import InputNormalization
 
 
@@ -200,11 +201,39 @@ EXPERIMENT_CONV_SHARED_AUX_HEAD_BIGGER = Experiment(
     build_aux_loss=lambda: nn.NLLLoss(),
 )
 
+EXPERIMENT_RESNET = Experiment(
+    name="Resnet, Shared, Aux",
+    epochs=200,
+
+    build_model=lambda: WeightShareModel(
+        shared_resnet(output_size=10, res=True),
+        output_head=dense_network([20, 20, 1], nn.ReLU(), nn.Sigmoid()),
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=1.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+)
+
+EXPERIMENT_RESNET_RESLESS = Experiment(
+    name="Resnet resless, Shared, Aux",
+    epochs=200,
+
+    build_model=lambda: WeightShareModel(
+        shared_resnet(output_size=10, res=False),
+        output_head=dense_network([20, 20, 1], nn.ReLU(), nn.Sigmoid()),
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=1.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+)
+
 EXPERIMENTS = [
     # EXPERIMENT_DENSE_MSE,
-    EXPERIMENT_DENSE_BCE,
-    EXPERIMENT_DENSE_INPUT_NORM_ELE,
-    EXPERIMENT_DENSE_INPUT_NORM_TOTAL,
+    # EXPERIMENT_DENSE_BCE,
+    # EXPERIMENT_DENSE_INPUT_NORM_ELE,
+    # EXPERIMENT_DENSE_INPUT_NORM_TOTAL,
     # EXPERIMENT_DENSE_EXPAND,
     # EXPERIMENT_DENSE_EXPAND_FLIP,
     # EXPERIMENT_DENSE_SHARE,
@@ -213,6 +242,9 @@ EXPERIMENTS = [
     # EXPERIMENT_DENSE_SHARE_AUX_PROB,
     # EXPERIMENT_CONV,
     # EXPERIMENT_CONV_SHARED,
-    # EXPERIMENT_CONV_SHARED_AUX,
+    EXPERIMENT_CONV_SHARED_AUX,
     # EXPERIMENT_CONV_SHARED_AUX_HEAD,
+
+    EXPERIMENT_RESNET,
+    EXPERIMENT_RESNET_RESLESS,
 ]

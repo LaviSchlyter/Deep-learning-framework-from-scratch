@@ -1,4 +1,5 @@
 import os
+from math import prod
 
 import torch
 from matplotlib import pyplot
@@ -27,6 +28,10 @@ def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_los
 
         model, loss_func, aux_loss_func = experiment.build()
         model.to(DEVICE)
+
+        if round == 0:
+            weight_count = sum(prod(param.shape) for param in model.parameters() if param.requires_grad)
+            print(f"Model has {weight_count} weights")
 
         optimizer = optim.Adam(model.parameters())
 
@@ -67,6 +72,7 @@ def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_los
     ax.legend(plot_legend)
 
     ax.set_xlabel("epoch")
+    ax.set_ylabel("accuracy")
     ax.xaxis.get_major_locator().set_params(integer=True)
     if not plot_loss:
         ax.set_ylim(0, 1)

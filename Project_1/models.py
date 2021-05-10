@@ -69,6 +69,61 @@ def shared_conv_network(last_activation: nn.Module, output_size: int):
     )
 
 
+# Resnet code based on https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
+class ResnetBlock(nn.Module):
+    def __init__(self, channels: int, res=True):
+        super().__init__()
+
+        self.res = res
+
+        self.norm1 = nn.BatchNorm2d(channels)
+        self.norm2 = nn.BatchNorm2d(channels)
+
+        self.conv1 = nn.Conv2d(channels, channels, kernel_size=(3, 3), padding=(1, 1))
+        self.conv2 = nn.Conv2d(channels, channels, kernel_size=(3, 3), padding=(1, 1))
+
+        self.relu = nn.ReLU()
+
+    def forward(self, input):
+        x = input
+
+        x = self.conv1(x)
+        x = self.norm1(x)
+        x = self.relu(x)
+
+        x = self.conv2(x)
+        x = self.norm2(x)
+        if self.res:
+            x = x + input
+        x = self.relu(x)
+
+        return x
+
+
+def shared_resnet(output_size: int, res: bool):
+    return nn.Sequential(
+        ViewModule(-1, 1, 14, 14),
+
+        nn.Conv2d(1, 32, (3, 3), padding=(1, 1)),
+        nn.ReLU(),
+
+        ResnetBlock(32, res),
+        ResnetBlock(32, res),
+
+        nn.MaxPool2d((2, 2)),
+
+        ResnetBlock(32, res),
+        ResnetBlock(32, res),
+
+        nn.Flatten(),
+        nn.Linear(32 * 7 * 7, 50),
+        nn.ReLU(),
+        nn.BatchNorm1d(50),
+        nn.Linear(50, output_size),
+        nn.Softmax(),
+    )
+
+
 class WeightShareModel(nn.Module):
     def __init__(self, input_module: nn.Module, output_head: nn.Module, digit_head: Optional[nn.Module] = None):
         super().__init__()
