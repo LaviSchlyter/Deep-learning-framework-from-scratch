@@ -1,10 +1,17 @@
 import math
 from abc import abstractmethod
 
+# Implementation of Autograd
 import torch
 from matplotlib import pyplot as plt
+
+
+# TODO remove plt and other libraries before handing
 # TODO How to make this without torch.tensor
-        # TODO Check with Karel assisant message on Slack
+# TODO Add a gradient tester
+# TODO Organize the files
+# TODO Add an optimizer
+# TODO Check with Karel assistant message on Slack
 
 
 class Module:
@@ -41,8 +48,6 @@ class Sequential:
         return par
 
 
-
-
 # Tensor
 class Tensor:
 
@@ -50,23 +55,20 @@ class Tensor:
 
         assert not isinstance(value, Tensor)
         self.value = value
-        # self.grad = torch.zeros_like(value)
-        self.grad = Tensor.zeros_like(value)
+        self.grad = zeros_like(value)
         self.grad_fn = grad_fn
 
     def backward(self, output_grad=None):
 
         if output_grad is None:
-            # output_grad = torch.ones_like(self.value)
-            output_grad = Tensor.ones_like(self.value)
+            output_grad = ones_like(self.value)
         if self.grad_fn is not None:
             self.grad_fn.backward(output_grad)
 
         self.grad += output_grad
 
     def zero_grad(self):
-        #self.grad = torch.zeros_like(self.value)
-        self.grad = Tensor.zeros_like(self.value)
+        self.grad = zeros_like(self.value)
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -80,20 +82,19 @@ class Tensor:
         concat[:, 0] = self.value[:, 0]
         concat[:, 1] = tensor.value[:, 0]
 
-        # damn = [self.value, tensor.value]
-
-        # return Tensor(torch.cat((self.value, tensor.value), 1), grad_fn= CatGradFn(self, tensor))
         return Tensor(concat, grad_fn=CatGradFn(self, tensor))
-
-    def zeros_like(self):
-        return torch.empty(self.shape).zero_()
-
-    def ones_like(self):
-        return Tensor.zeros_like(self) + 1
 
     @property
     def shape(self):
         return self.value.shape
+
+
+def zeros_like(tensor):
+    return torch.empty(tensor.shape).zero_()
+
+
+def ones_like(tensor):
+    return zeros_like(tensor) + 1
 
 
 # Layers
@@ -144,22 +145,15 @@ class Sigmoid(Module):
 
 
 class Relu(Module):
+    # alpha is the negative slope, 0 is zero else leaky ReLu
+    def __init__(self, alpha=0.):
+        self.alpha = alpha
+        assert (0 <= alpha < 1)
 
     def __call__(self, input_):
         return Tensor(
-            # value=torch.maximum(torch.zeros_like(input_.value), input_.value),
-            # TODO Fix maximum, am I allowed to do this
-            value=Tensor.zeros_like(input_).maximum(input_.value),
-            grad_fn=ReluGradFn(input_)
-        )
-
-    # Same but to be able to write in the two notations
-    @staticmethod
-    def forward(input_):
-        return Tensor(
-
-            value=Tensor.zeros_like(input_).maximum(input_),
-            grad_fn=ReluGradFn(input_)
+            value=input_.value.maximum(input_.value * self.alpha),
+            grad_fn=ReluGradFn(input_, alpha=self.alpha)
         )
 
     def param(self):
@@ -174,8 +168,7 @@ class SliceGradFn:
         self.item = item
 
     def backward(self, output_grad):
-        # input_grad = torch.zeros_like(self.input_.value)
-        input_grad = Tensor.zeros_like(self.input_.value)
+        input_grad = zeros_like(self.input_.value)
         input_grad[:, self.item] = output_grad
         self.input_.backward(input_grad)
 
@@ -208,13 +201,14 @@ class LinearGradFn:
 
 class ReluGradFn:
 
-    def __init__(self, input_):
+    def __init__(self, input_, alpha):
+        self.alpha = alpha
         self.input_ = input_
 
     def backward(self, output_grad):
-        input_grad = output_grad * (self.input_.value > 0)
+        # TODO does this even work ??
+        input_grad = output_grad * (self.input_.value >= 0) + output_grad * (self.input_.value < 0) * (- self.alpha)
         self.input_.backward(input_grad)
-        # self.input_.grad += input_grad
 
 
 class SigmoidGradFn:
@@ -307,22 +301,6 @@ class LossMSE:
         return []
 
 
-def evaluate(pred, target):
-    return 1 - ((pred.value > 0.5) == (target.value > 0.5)).sum() / len(pred.value)
-
-
-def plot_performance(plot_data, plot_legend, print_loss = True):
-
-    if not print_loss:
-        plot_legend = plot_legend[:2]
-
-    for i, legend in enumerate(plot_legend):
-
-        plt.plot(plot_data[:, i], label=legend)
-    plt.legend()
-    plt.show()
-
-
 class LossMSEGradFN:
     def __init__(self, input_, target):
         self.target = target
@@ -333,17 +311,35 @@ class LossMSEGradFN:
         self.input_.backward(input_grad)
         self.target.backward(-input_grad)
 
-# TODO Add cross entropy loss ....
-class LossCrossEntropy:
+
+class BCELoss:
 
     def __call__(self, input_, target):
-        return -(input_.value*math.log(target)).sum()
+        ok = -(target.value * input_.value.log().clamp(-100, float("inf")) + (1 - target.value) * (
+                    1 - input_.value).log().clamp(-100, float("inf"))).sum(dim=0)
+        return Tensor(-(target.value * input_.value.log().clamp(-100, float("inf")) + (1 - target.value) * (
+                    1 - input_.value).log().clamp(-100, float("inf"))).sum(dim=0),
+                      grad_fn=LossBCEGradFN(input_, target))
 
     @staticmethod
     def param():
         return []
 
 
+class LossBCEGradFN:
+
+    def __init__(self, input_, target):
+        self.input_ = input_
+        self.target = target
+
+    # TODO Verify this
+    def backward(self, output_grad):
+        x = self.input_.value
+        y = self.target.value
+        eps = ones_like(x) * 1e-12
+        input_grad = ((x - y) / ((1 - x) * x).maximum(eps)) * output_grad
+        self.input_.backward(input_grad)
+        self.target.backward((-x.log() + (1 - x).log()) * output_grad)
 
 
 def generate_disc_set(nb):
@@ -352,13 +348,27 @@ def generate_disc_set(nb):
     return Tensor(input_), Tensor(target[:, None])
 
 
+def evaluate(pred, target):
+    return 1 - ((pred.value > 0.5) == (target.value > 0.5)).sum() / len(pred.value)
+
+
+def plot_performance(plot_data, plot_legend, print_loss=True):
+    if not print_loss:
+        plot_legend = plot_legend[:2]
+
+    for i, legend in enumerate(plot_legend):
+        plt.plot(plot_data[:, i], label=legend)
+    plt.legend()
+    plt.show()
+
+
 def main():
     # Disable the use of autograd from PyTorch
     torch.set_grad_enabled(False)
     # torch.manual_seed(19)
 
-    model = Sequential([Linear(1, 50), Relu(), Linear(50, 25), Relu(), Linear(25, 1), Relu()])
-    model_ = Sequential([Linear(2 * 1, 50), Relu(), Linear(50, 25), Relu(), Linear(25, 1), Sigmoid()])
+    model = Sequential([Linear(2, 50), Relu(0), Linear(50, 25), Relu(0), Linear(25, 1), Sigmoid()])
+    # model_ = Sequential([Linear(2 * 10, 50), Relu(), Linear(50, 25), Relu(), Linear(25, 1), Sigmoid()])
 
     # Generate the set of size n
     n = 1000
@@ -380,37 +390,38 @@ def main():
     plt.scatter(train_input.value[~train_mask, 0], train_input.value[~train_mask, 1])
     plt.show()
 
-    loss = LossMSE()
-    criterion = Adam(model.param() + model_.param())
+    loss = BCELoss()
+    criterion = Adam(model.param(), alpha=0.0005)
+    # criterion = Adam(model.param() + model_.param())
     # criterion = SGD(model.param(), 0.05/n)
 
-    epoch = 500
+    epoch = 400
     plot_data = torch.empty(epoch, 4)
     plot_legend = ["train_error", "test_error", "train_loss", "test_loss"]
     for e in range(epoch):
         criterion.zero_grad()
 
         # Train evaluation
+        y_train = model(train_input)
+        # y_train_x = model(train_input_x)
+        # y_train_y = model(train_input_y)
 
-        y_train_x = model(train_input_x)
-        y_train_y = model(train_input_y)
-
-        y_train = model_(y_train_x.cat(y_train_y))
+        # y_train = model_(y_train_x.cat(y_train_y))
 
         cost_train = loss(y_train, train_target)
         error_train = evaluate(y_train, train_target)
 
         # Test evaluation
-        y_test_x = model(test_input_x)
-        y_test_y = model(test_input_y)
+        # y_test_x = model(test_input_x)
+        # y_test_y = model(test_input_y)
 
-        y_test = model_(y_test_x.cat(y_test_y))
-        # y_test = model(test_input)
+        # y_test = model_(y_test_x.cat(y_test_y))
+        y_test = model(test_input)
         cost_test = loss(y_test, test_target)
         error_test = evaluate(y_test, test_target)
 
         # Save values for data plotting
-        #plot_data[e,:] = [error_train, error_test, cost_train.value / n, cost_test.value / n]
+        # plot_data[e,:] = [error_train, error_test, cost_train.value / n, cost_test.value / n]
 
         plot_data[e, :] = torch.tensor([error_train, error_test, cost_train.value / n, cost_test.value / n])
 
@@ -418,17 +429,11 @@ def main():
         criterion.step()
         # print(f"For epoch = {e} with MSE loss = {cost.value}")
 
-
-
-    plot_performance(plot_data, plot_legend, False)
+    plot_performance(plot_data, plot_legend, True)
     print("test error: ", evaluate(y_test, test_target))
-
+    print("test loss: ", cost_test.value)
     print("train error: ", evaluate(y_train, train_target))
 
-    test = torch.empty(3, 1)
-    test2 = torch.empty(3, 1)
-    print(test, test2)
-    print(test2.maximum(test))
 
 
 if __name__ == '__main__':
