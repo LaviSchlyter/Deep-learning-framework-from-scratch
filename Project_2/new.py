@@ -1,15 +1,15 @@
 # Implementation of Autograd
-import seaborn as sns
 from matplotlib import pyplot as plt
+
+from Project_2.modules import *
+from Project_2.utils import *
+
 
 # TODO remove plt and other libraries before handing
 # TODO Add a gradient tester
 # TODO Organize the files
 # TODO Add an optimizer
 # TODO plot the ones that are wrongly classified
-# TODO Plot a heatmap of the points
-from Project_2.modules import *
-from Project_2.utils import *
 
 
 def plot_performance(plot_data, plot_legend, print_loss=True):
@@ -48,8 +48,9 @@ def main():
     test_input_y = test_input[1]
 
     train_mask = train_target.value[:, 0] > 0.5
-    plt.scatter(train_input.value[train_mask, 0], train_input.value[train_mask, 1])
-    plt.scatter(train_input.value[~train_mask, 0], train_input.value[~train_mask, 1])
+    plt.figure(figsize=(7, 7))
+    plt.scatter(train_input.value[train_mask, 0], train_input.value[train_mask, 1], color="coral")
+    plt.scatter(train_input.value[~train_mask, 0], train_input.value[~train_mask, 1], color="c")
     xmin, xmax, ymin, ymax = plt.axis()
 
     plt.show()
@@ -95,32 +96,23 @@ def main():
         cost_train.backward()
         criterion.step()
 
+    # Generate the heatmap for uncertain predictions
     image_input_x, image_input_y = torch.meshgrid(torch.linspace(xmin, xmax, 1000), torch.linspace(ymin, ymax, 1000))
     image_input = torch.cat([image_input_x.reshape(-1, 1), image_input_y.reshape(-1, 1)], dim=1)
 
     image_output = model(Tensor(image_input))
     import matplotlib
-    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["orange", "yellow", "blue"])
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["c", "yellow", "coral"])
+    plt.figure(figsize=(7, 7))
     plt.imshow(image_output.value.reshape(-1, 1000), cmap=cmap)
-    # plt.xlim([xmin,xmax])
-    # plt.ylim([ymin, ymax])
+    import numpy as np
+    plt.xticks(np.linspace(100, 901, 7), ["-1.5", "-1", "-0.5", "0.0", "0.5", "1.0", "1.5"])
+    plt.yticks(np.linspace(100, 901, 7), ["1.5", "1", "0.5", "0.0", "-0.5", "-1.0", "-1.5"])
     plt.show()
 
     plot_performance(plot_data, plot_legend, True)
     print("Test error: ", evaluate(y_test, test_target))
-    y_test_nu = y_test.value.numpy()
-    sns.heatmap(y_test_nu)
-
     print("Train error: ", evaluate(y_train, train_target))
-
-    wrong_pred_coordinates = test_input.value[((y_test.value > 0.5) != (test_target.value > 0.5))[:, 0], :]
-    # ok = ((y_test.value > 0.5) != (test_target.value > 0.5))
-    # plt.title("Wrongly predicted")
-    # plt.scatter(wrong_pred_coordinates[:, 0], wrong_pred_coordinates[:,1])
-
-    # plt.xlim([xmin,xmax])
-    # plt.ylim([ymin, ymax])
-    plt.show()
 
 
 if __name__ == '__main__':
