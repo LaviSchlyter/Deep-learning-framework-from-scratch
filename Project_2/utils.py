@@ -11,5 +11,5 @@ def generate_disc_set(nb):
     return Tensor(input_), Tensor(target[:, None])
 
 
-def evaluate(pred, target):
+def evaluate_error(pred, target):
     return 1 - ((pred.value > 0.5) == (target.value > 0.5)).sum() / len(pred.value)
