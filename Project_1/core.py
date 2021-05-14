@@ -26,10 +26,16 @@ def evaluate_model(
         a_pred = None
         b_pred = None
 
+    assert y_pred.shape[1] == 1, f"final prediction should have size 1, was {y_pred.shape}"
     y_pred = y_pred[:, 0]
 
     loss = loss_func(y_pred, y_float)
+
     if aux_loss_func is not None:
+        if isinstance(aux_loss_func, nn.NLLLoss):
+            assert a_pred.shape[1] == 10, f"digit prediction should have size 10, was {a_pred.shape}"
+            assert b_pred.shape[1] == 10, f"digit prediction should have size 10, was {b_pred.shape}"
+
         loss += aux_weight * (
                 aux_loss_func(a_pred, y_digit[:, 0]) +
                 aux_loss_func(b_pred, y_digit[:, 1])
