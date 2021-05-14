@@ -45,14 +45,16 @@ class Data:
                 setattr(self, field.name, value.to(device))
 
     def expand_train_flip(self):
+        same_digit = self.train_digit[:, 0] == self.train_digit[:, 1]
+
         self.train_x = torch.cat([self.train_x, self.train_x.flip(1)])
-        self.train_y = torch.cat([self.train_y, 1 - self.train_y])
-        self.train_y_float = torch.cat([self.train_y_float, 1 - self.train_y_float])
+        self.train_y = torch.cat([self.train_y, 1 - self.train_y + same_digit])
+        self.train_y_float = torch.cat([self.train_y_float, 1 - self.train_y_float + same_digit])
         self.train_digit = torch.cat([self.train_digit, self.train_digit.flip(1)])
 
     def expand_train_transform(self, factor: int):
         assert factor >= 1
-        transform = RandomAffine(degrees=10, shear=20, interpolation=InterpolationMode.BILINEAR)
+        transform = RandomAffine(degrees=5, shear=10, interpolation=InterpolationMode.BILINEAR)
 
         self.train_size *= factor
 
