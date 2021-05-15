@@ -1,5 +1,5 @@
 import math
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 
 import torch
 
@@ -15,19 +15,32 @@ class Module:
         pass
 
 
+class WeightSharing(Module):
+    # model_ = Sequential([Linear(2 * 10, 50), Relu(), Linear(50, 25), Relu(), Linear(25, 1), Sigmoid()])
+    def __init__(self, input_module, output_module):
+        # TODO assert the dimensions
+        self.output_module = output_module
+        self.input_module = input_module
+
+    def __call__(self, input_):
+        hidden_x = self.input_module(input_[0])
+        hidden_y = self.input_module(input_[1])
+
+        y_pred = self.output_module(hidden_x.cat(hidden_y))
+        return y_pred
+
+    def param(self):
+        # Return the parameters for the optimizer
+        return self.input_module.param() + self.output_module.param()
+
+
 class Sequential:
     def __init__(self, layers):
         self.layers = layers
 
     def __call__(self, input_):
-        self.intermediates = []
-
         for layer in self.layers:
-            self.intermediates.append(input_)
             input_ = layer(input_)
-
-        self.intermediates.append(input_)
-
         return input_
 
     def param(self):
@@ -69,8 +82,9 @@ class Tensor:
         # Concatenation
         size_cat = [self.value.shape[0], self.value.shape[1] + tensor.value.shape[1]]
         concat = torch.empty(size_cat)
-        concat[:, 0] = self.value[:, 0]
-        concat[:, 1] = tensor.value[:, 0]
+
+        concat[:, :self.shape[1]] = self.value
+        concat[:, self.shape[1]:] = tensor.value
 
         return Tensor(concat, grad_fn=CatGradFn(self, tensor))
 
@@ -131,9 +145,10 @@ class LinearGradFn:
 class Tanh(Module):
 
     def __call__(self, input_):
+        output = 2 * Sigmoid.sigmoid(2 * input_.value) - 1
         return Tensor(
-            value=2 * Sigmoid.sigmoid(input_.value) - 1,
-            grad_fn=TanhGradFn(input_)
+            value=output,
+            grad_fn=TanhGradFn(input_, output)
         )
 
     def param(self):
@@ -142,22 +157,22 @@ class Tanh(Module):
 
 class TanhGradFn:
 
-    def __init__(self, input_):
+    def __init__(self, input_, output):
+        self.output = output
         self.input_ = input_
 
     def backward(self, output_grad):
-        input_grad = output_grad * (1 - pow(self.input_.value, 2))
+        input_grad = output_grad * (1 - pow(self.output, 2))
         self.input_.backward(input_grad)
-        self.input_.grad += input_grad
-        return input_grad
 
 
 class Sigmoid(Module):
 
     def __call__(self, input_):
+        output = Sigmoid.sigmoid(input_.value)
         return Tensor(
-            value=Sigmoid.sigmoid(input_.value),
-            grad_fn=SigmoidGradFn(input_)
+            value=output,
+            grad_fn=SigmoidGradFn(input_, output)
         )
 
     def param(self):
@@ -170,12 +185,12 @@ class Sigmoid(Module):
 
 class SigmoidGradFn:
 
-    def __init__(self, input_):
+    def __init__(self, input_, output):
+        self.output = output
         self.input_ = input_
 
     def backward(self, output_grad):
-        output = Sigmoid.sigmoid(self.input_.value)
-        input_grad = output_grad * output * (1 - output)
+        input_grad = output_grad * self.output * (1 - self.output)
         self.input_.backward(input_grad)
 
 
@@ -218,7 +233,7 @@ class SliceGradFn:
 
 
 # Optimizers (SGD, Adam)
-class Optim:
+class Optimizer(ABC):
 
     def __init__(self, params):
         self.params = params  # model parameters
@@ -227,8 +242,12 @@ class Optim:
         for param in self.params:
             param.zero_grad()
 
+    @abstractmethod
+    def step(self):
+        pass
 
-class Adam(Optim):
+
+class Adam(Optimizer):
     def __init__(self, params, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
         """
 
@@ -243,33 +262,35 @@ class Adam(Optim):
         self.beta2 = beta2
         self.beta1 = beta1
         self.alpha = alpha
+        self.t = 0
+        self.m = [0] * len(self.params)
+        self.v = [0] * len(self.params)
 
     def step(self):
-        m = [0] * len(self.params)
-        v = [0] * len(self.params)
-
+        self.t += 1
         for i, param in enumerate(self.params):
-            # gt = param.grad
-            m[i] = self.beta1 * m[i] + (1 - self.beta1) * param.grad
-            v[i] = self.beta2 * v[i] + (1 - self.beta2) * param.grad ** 2
-            m_hat = m[i] / (1 - self.beta1)
-            v_hat = v[i] / (1 - self.beta2)
+            self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * param.grad
+            self.v[i] = self.beta2 * self.v[i] + (1 - self.beta2) * param.grad ** 2
+            m_hat = self.m[i] / (1 - self.beta1 ** self.t)
+            v_hat = self.v[i] / (1 - self.beta2 ** self.t)
+            ok = self.alpha * m_hat / (v_hat.sqrt() + self.epsilon)
             param.value -= self.alpha * m_hat / (v_hat.sqrt() + self.epsilon)
 
 
-class SGD(Optim):
-    def __init__(self, params, lr):
+class SGD(Optimizer):
+    def __init__(self, params, lr, lambda_=0):
         """
 
         :param params: Parameters that will be updated
         :param lr: The learning rate
         """
         super().__init__(params)
+        self.lambda_ = lambda_
         self.lr = lr
 
     def step(self):
         for param in self.params:
-            param.value -= self.lr * param.grad
+            param.value -= self.lr * (param.grad + self.lambda_ * param.value)
 
 
 # Loss functions (MSE, cross entropy)
@@ -298,8 +319,6 @@ class LossMSEGradFN:
 class LossBCE:
 
     def __call__(self, input_, target):
-        ok = -(target.value * input_.value.log().clamp(-100, float("inf")) + (1 - target.value) * (
-                1 - input_.value).log().clamp(-100, float("inf"))).sum(dim=0)
         return Tensor(-(target.value * input_.value.log().clamp(-100, float("inf")) + (1 - target.value) * (
                 1 - input_.value).log().clamp(-100, float("inf"))).sum(dim=0),
                       grad_fn=LossBCEGradFN(input_, target))
