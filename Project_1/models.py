@@ -13,7 +13,6 @@ class ViewModule(nn.Module):
         return input.view(*self.shape)
 
 
-# TODO this function is getting pretty confusing, maybe just stop using it
 def dense_network(sizes: List[int], activation: Optional[nn.Module], last_activation: nn.Module = None):
     assert len(sizes) >= 0, "Dense network needs at least an input size"
 
@@ -117,24 +116,28 @@ def shared_resnet(output_size: int, res: bool):
 
         nn.Flatten(),
         nn.Linear(32 * 7 * 7, 50),
+        nn.Dropout(),
         nn.ReLU(),
-        nn.BatchNorm1d(50),
         nn.Linear(50, output_size),
         nn.Softmax(),
     )
 
 
-class WeightShareModel(nn.Module):
-    def __init__(self, input_module: nn.Module, output_head: nn.Module, digit_head: Optional[nn.Module] = None):
+class PreprocessModel(nn.Module):
+    def __init__(
+            self,
+            a_input_module: nn.Module, b_input_module: nn.Module,
+            output_head: nn.Module, digit_head: Optional[nn.Module] = None
+    ):
         super().__init__()
-
-        self.input_module = input_module
-        self.digit_head = digit_head
+        self.a_input_module = a_input_module
+        self.b_input_module = b_input_module
         self.output_head = output_head
+        self.digit_head = digit_head
 
     def forward(self, input):
-        hidden_a = self.input_module(input[:, 0])
-        hidden_b = self.input_module(input[:, 1])
+        hidden_a = self.a_input_module(input[:, 0])
+        hidden_b = self.b_input_module(input[:, 1])
 
         hidden = torch.stack([hidden_a, hidden_b], dim=1)
         output = self.output_head(hidden)
@@ -146,9 +149,14 @@ class WeightShareModel(nn.Module):
         return output, hidden_a, hidden_b
 
 
-# TODO use a generic "outer product layer" followed by a linear layer instead
+class WeightShareModel(PreprocessModel):
+    def __init__(self, input_module: nn.Module, output_head: nn.Module, digit_head: Optional[nn.Module] = None):
+        super().__init__(input_module, input_module, output_head, digit_head)
+
+
 class ProbOutputLayer(nn.Module):
-    def forward(self, input):
+    @staticmethod
+    def forward(input):
         eq_mask = torch.eye(10)[None, :, :].to(input.device)
         lt_mask = torch.ones(10, 10).triu()[None, :, :].to(input.device)
 

@@ -54,7 +54,7 @@ class Data:
 
     def expand_train_transform(self, factor: int):
         assert factor >= 1
-        transform = RandomAffine(degrees=5, shear=10, interpolation=InterpolationMode.BILINEAR)
+        transform = RandomAffine(degrees=10, shear=20, interpolation=InterpolationMode.BILINEAR)
 
         self.train_size *= factor
 
@@ -98,7 +98,7 @@ def normalize(train_x, test_x, input_normalization: InputNormalization):
     return (train_x - mean) / std, (test_x - mean) / std
 
 
-def load_data(data_size: int, input_normalization: InputNormalization) -> Data:
+def load_data(data_size: int, input_normalization: InputNormalization = InputNormalization.No) -> Data:
     train_x, train_y, train_digit, test_x, test_y, test_digit = generate_pair_sets(data_size)
 
     train_x, test_x = normalize(train_x, test_x, input_normalization)
