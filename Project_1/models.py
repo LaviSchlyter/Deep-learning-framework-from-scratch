@@ -51,7 +51,6 @@ def full_conv_network():
 
 def shared_conv_network(last_activation: nn.Module, output_size: int):
     return nn.Sequential(
-        ViewModule(-1, 1, 14, 14),
         nn.Conv2d(1, 32, (5, 5)),
         nn.MaxPool2d(2),
         nn.ReLU(),
@@ -101,8 +100,6 @@ class ResnetBlock(nn.Module):
 
 def shared_resnet(output_size: int, res: bool):
     return nn.Sequential(
-        ViewModule(-1, 1, 14, 14),
-
         nn.Conv2d(1, 32, (3, 3), padding=(1, 1)),
         nn.ReLU(),
 
@@ -136,8 +133,9 @@ class PreprocessModel(nn.Module):
         self.digit_head = digit_head
 
     def forward(self, input):
-        hidden_a = self.a_input_module(input[:, 0])
-        hidden_b = self.b_input_module(input[:, 1])
+        # keep the channel axis to make convolutional networks easier to implement
+        hidden_a = self.a_input_module(input[:, 0, None])
+        hidden_b = self.b_input_module(input[:, 1, None])
 
         hidden = torch.stack([hidden_a, hidden_b], dim=1)
         output = self.output_head(hidden)
