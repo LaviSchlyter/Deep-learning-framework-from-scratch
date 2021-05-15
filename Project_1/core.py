@@ -4,7 +4,7 @@ from typing import Optional
 import torch
 from torch import nn, optim
 
-from util import Data, DEVICE
+from util import Data
 
 
 def evaluate_model(
@@ -64,6 +64,32 @@ def train_model(
     plot_data = torch.zeros(epochs, 6)
 
     for e in range(epochs):
+        # training
+        data.shuffle_train()
+
+        for bi in range(batch_count):
+            batch_range = slice(bi * batch_size, (bi + 1) * batch_size)
+
+            model.train()
+            batch_train_loss, _, _ = evaluate_model(
+                model,
+                data.train_x[batch_range], data.train_y[batch_range], data.train_y_float[batch_range],
+                data.train_digit[batch_range],
+                loss_func, aux_weight, aux_loss_func
+            )
+
+            optimizer.zero_grad()
+            batch_train_loss.backward()
+            optimizer.step()
+
+        # train evaluation
+        model.eval()
+        train_loss, train_acc, train_digit_acc = evaluate_model(
+            model,
+            data.train_x, data.train_y, data.train_y_float, data.train_digit,
+            loss_func, aux_weight, aux_loss_func
+        )
+
         # test evaluation
         model.eval()
         test_loss, test_acc, test_digit_acc = evaluate_model(
@@ -72,40 +98,11 @@ def train_model(
             loss_func, aux_weight, aux_loss_func
         )
 
-        # train evaluation
-        data.shuffle_train()
-
-        total_train_loss = torch.tensor(0.0, device=DEVICE)
-        total_train_acc = torch.tensor(0.0, device=DEVICE)
-        total_train_digit_acc = torch.tensor(0.0, device=DEVICE)
-
-        for bi in range(batch_count):
-            batch_range = slice(bi * batch_size, (bi + 1) * batch_size)
-
-            model.train()
-            batch_train_loss, batch_train_acc, batch_train_digit_acc = evaluate_model(
-                model,
-                data.train_x[batch_range], data.train_y[batch_range], data.train_y_float[batch_range],
-                data.train_digit[batch_range],
-                loss_func, aux_weight, aux_loss_func
-            )
-
-            total_train_loss += batch_train_loss
-            total_train_acc += batch_train_acc
-            total_train_digit_acc += batch_train_digit_acc
-
-            optimizer.zero_grad()
-            batch_train_loss.backward()
-            optimizer.step()
-
-        train_loss = total_train_loss / batch_count
-        train_acc = total_train_acc / batch_count
-        train_digit_acc = total_train_digit_acc / batch_count
-
         plot_data[e, :] = torch.tensor([
-            train_loss.item(), train_acc, train_digit_acc,
-            test_loss.item(), test_acc, test_digit_acc,
+            train_acc, train_digit_acc,
+            test_acc, test_digit_acc,
+            train_loss.item(), test_loss.item(),
         ])
 
-    plot_legend = "train_loss", "train_acc", "train_digit_acc", "test_loss", "test_acc", "test_digit_acc"
+    plot_legend = "train_acc", "train_digit_acc", "test_acc", "test_digit_acc", "train_loss", "test_loss"
     return plot_data, plot_legend
