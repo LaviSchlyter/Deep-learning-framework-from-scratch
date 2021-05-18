@@ -17,8 +17,9 @@ class Experiment:
     epochs: int
 
     build_model: Callable[[], nn.Module]
-    build_loss: Callable[[], nn.Module]
 
+    build_loss: Callable[[], nn.Module]
+    weight_decay: float = 0
     aux_weight: float = float("nan")
     build_aux_loss: Optional[Callable[[], nn.Module]] = None
 
@@ -53,7 +54,7 @@ def run_experiment(base_name: str, experiment: Experiment, data_size: int, round
             weight_count = sum(prod(param.shape) for param in model.parameters() if param.requires_grad)
             print(f"Model has {weight_count} weights")
 
-        optimizer = optim.Adam(model.parameters())
+        optimizer = optim.AdamW(model.parameters(), weight_decay=experiment.weight_decay)
 
         plot_data, plot_legend = train_model(
             model=model, optimizer=optimizer, loss_func=loss_func, data=data,

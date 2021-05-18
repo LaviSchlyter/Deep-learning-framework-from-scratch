@@ -13,7 +13,11 @@ class ViewModule(nn.Module):
         return input.view(*self.shape)
 
 
-def dense_network(sizes: List[int], activation: Optional[nn.Module], last_activation: nn.Module = None):
+def dense_network(
+        sizes: List[int],
+        activation: Optional[nn.Module], last_activation: nn.Module,
+        batch_norm: bool = False
+):
     assert len(sizes) >= 0, "Dense network needs at least an input size"
 
     layers = [
@@ -23,14 +27,19 @@ def dense_network(sizes: List[int], activation: Optional[nn.Module], last_activa
     prev_size = sizes[0]
     for i, size in enumerate(sizes[1:]):
         if i != 0:
+            if batch_norm:
+                layers.append(nn.BatchNorm1d(prev_size))
+
             assert activation is not None, f"Network with sizes {sizes} needs activation function"
             layers.append(activation)
-            layers.append(nn.BatchNorm1d(prev_size))
 
         layers.append(nn.Linear(prev_size, size))
         prev_size = size
 
-    layers.append(last_activation or activation)
+    if batch_norm:
+        layers.append(nn.BatchNorm1d(prev_size))
+
+    layers.append(last_activation)
     return nn.Sequential(*layers)
 
 
@@ -59,9 +68,11 @@ def shared_conv_network(last_activation: nn.Module, output_size: int):
         nn.ReLU(),
         nn.BatchNorm2d(64),
         nn.Flatten(),
+        # nn.Dropout(.5),
         nn.Linear(64, 50),
         nn.ReLU(),
         nn.BatchNorm1d(50),
+        # nn.Dropout(.5),
         nn.Linear(50, output_size),
         last_activation,
     )

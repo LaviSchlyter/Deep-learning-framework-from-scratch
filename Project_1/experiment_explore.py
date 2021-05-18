@@ -146,13 +146,106 @@ EXPERIMENT_CONV_SHARED = Experiment(
 )
 
 EXPERIMENT_CONV_SHARED_AUX = Experiment(
-    name="Shared Conv + Dense, Aux",
-    epochs=50,
+    name="Shared Conv + Dense, Aux 1.0",
+    epochs=20,
+    batch_size=100,
+
+    build_model=lambda: WeightShareModel(
+        shared_conv_network(nn.Softmax(), output_size=10),
+        nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=1.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+)
+
+WEIGHT = .8
+
+EXPERIMENT_CONV_SHARED_AUX_INV_10 = Experiment(
+    name=f"Shared Conv + Dense, Aux {WEIGHT}",
+    epochs=40,
+    batch_size=100,
+
+    build_model=lambda: WeightShareModel(
+        shared_conv_network(nn.Softmax(), output_size=10),
+        nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=WEIGHT,
+    build_aux_loss=lambda: nn.NLLLoss(),
+)
+
+EXPERIMENT_CONV_SHARED_AUX_10 = Experiment(
+    name="Shared Conv + Dense, Aux 10.0",
+    epochs=20,
 
     build_model=lambda: WeightShareModel(
         shared_conv_network(nn.Softmax(), output_size=10),
         dense_network([20, 20, 1], nn.ReLU(), nn.Sigmoid())
     ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=10.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+
+    batch_size=100,
+)
+
+EXPERIMENT_CONV_SHARED_AUX_INV_10_BATCH = Experiment(
+    name="Shared Conv + Dense, Aux 0.1 batchnorm",
+    epochs=100,
+
+    build_model=lambda: WeightShareModel(
+        shared_conv_network(nn.Softmax(), output_size=10),
+        nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.BatchNorm1d(20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=0.1,
+    build_aux_loss=lambda: nn.NLLLoss(),
+
+    batch_size=100,
+)
+
+# TODO this may not be dropout any more
+EXPERIMENT_CONV_SHARED_AUX_INV_10_DROP = Experiment(
+    name="Shared Conv + Dense, Aux 0.1, Drop",
+    epochs=100,
+
+    build_model=lambda: WeightShareModel(
+        shared_conv_network(nn.Softmax(), output_size=10),
+        nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.Dropout(),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    weight_decay=0.0,
 
     build_loss=lambda: nn.BCELoss(),
     aux_weight=1.0,
@@ -300,12 +393,17 @@ EXPERIMENTS_EXPLORE = [
     # EXPERIMENT_CONV,
     # EXPERIMENT_CONV_SHARED,
     # EXPERIMENT_CONV_SHARED_AUX,
+    # EXPERIMENT_CONV_SHARED_AUX_10,
+    EXPERIMENT_CONV_SHARED_AUX_INV_10,
+    # EXPERIMENT_CONV_SHARED_AUX_INV_10_DROP,
+    # EXPERIMENT_CONV_SHARED_AUX_INV_10_DECAY,
+    # EXPERIMENT_CONV_SHARED_AUX_INV_10_BATCH
     # EXPERIMENT_CONV_SHARED_AUX_EXPAND,
     # EXPERIMENT_CONV_SHARED_AUX_HEAD,
     # EXPERIMENT_RESNET,
     # EXPERIMENT_RESNET_RESLESS,
     # EXPERIMENT_RESNET_RESLESS_MSE,
-    EXPERIMENT_RESNET_RESLESS_BATCHED,
+    # EXPERIMENT_RESNET_RESLESS_BATCHED,
 ]
 
 if __name__ == '__main__':
