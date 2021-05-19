@@ -1,23 +1,44 @@
 import os
+from dataclasses import dataclass
 from math import prod
+from typing import Callable, Optional
 
 import torch
 from matplotlib import pyplot
-from torch import optim
+from torch import optim, nn
 
 from core import train_model
-from experiments import EXPERIMENTS, Experiment
-from util import select_device, load_data
-
-DEVICE = select_device(debug_on_cpu=True)
+from util import load_data, DEVICE, InputNormalization
 
 
-def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_loss: bool):
+@dataclass
+class Experiment:
+    name: str
+    epochs: int
+
+    build_model: Callable[[], nn.Module]
+
+    build_loss: Callable[[], nn.Module]
+    weight_decay: float = 0
+    aux_weight: float = float("nan")
+    build_aux_loss: Optional[Callable[[], nn.Module]] = None
+
+    expand_factor: int = 1
+    expand_flip: bool = False
+    input_normalization: InputNormalization = InputNormalization.No
+
+    batch_size: int = -1
+
+    def build(self):
+        return self.build_model(), self.build_loss(), None if self.build_aux_loss is None else self.build_aux_loss()
+
+
+def run_experiment(base_name: str, experiment: Experiment, data_size: int, rounds: int, plot_loss: bool):
     all_plot_data = None
     plot_legend = None
 
     for round in range(rounds):
-        print(f"Round {round}/{rounds}")
+        print(f"Round {round + 1}/{rounds}")
 
         data = load_data(data_size, experiment.input_normalization)
         if experiment.expand_flip:
@@ -33,12 +54,12 @@ def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_los
             weight_count = sum(prod(param.shape) for param in model.parameters() if param.requires_grad)
             print(f"Model has {weight_count} weights")
 
-        optimizer = optim.Adam(model.parameters())
+        optimizer = optim.AdamW(model.parameters(), weight_decay=experiment.weight_decay)
 
         plot_data, plot_legend = train_model(
             model=model, optimizer=optimizer, loss_func=loss_func, data=data,
             aux_loss_func=aux_loss_func, aux_weight=experiment.aux_weight,
-            epochs=experiment.epochs
+            epochs=experiment.epochs, batch_size=experiment.batch_size
         )
 
         if all_plot_data is None:
@@ -63,10 +84,6 @@ def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_los
         ax.plot(plot_data_mean + plot_data_dev, '--', alpha=.5)
         ax.set_prop_cycle(None)
         ax.plot(plot_data_mean - plot_data_dev, '--', alpha=.5)
-        # ax.set_prop_cycle(None)
-        # ax.plot(plot_data_min, '--', alpha=.2)
-        # ax.set_prop_cycle(None)
-        # ax.plot(plot_data_max, '--', alpha=.2)
 
     pyplot.title(experiment.name)
     ax.legend(plot_legend)
@@ -74,31 +91,28 @@ def run_experiment(experiment: Experiment, data_size: int, rounds: int, plot_los
     ax.set_xlabel("epoch")
     ax.set_ylabel("accuracy")
     ax.xaxis.get_major_locator().set_params(integer=True)
-    if not plot_loss:
-        ax.set_ylim(0, 1)
+    ax.set_ylim(0, 1)
 
-    fig.savefig(f"output/{experiment.name}.png")
+    fig.savefig(f"output/{base_name}/{experiment.name}.png")
     fig.show()
 
-    with open(f"output/{experiment.name}.txt", "w") as f:
+    with open(f"output/{base_name}/{experiment.name}.txt", "w") as f:
         f.write("Final performance:\n")
         for i in range(len(plot_legend)):
             f.write(f"{plot_legend[i]} = {plot_data_mean[-1, i]:.3f} +- {plot_data_dev[-1, i]:.3f}"
                     f" (min={plot_data_min[-1, i]:.3f}, max={plot_data_max[-1, i]:.3f})\n")
 
 
-def main():
-    print(f"Running on device {DEVICE}")
-    os.makedirs("output", exist_ok=True)
+def run_experiments(base_name: str, experiments: [Experiment]):
+    print(f"Running experiments '{base_name}'")
+    os.makedirs(f"output/{base_name}", exist_ok=True)
 
-    rounds: int = 10
+    rounds: int = 3
     data_size: int = 1000
-    plot_loss: bool = False
+    plot_loss: bool = True
 
-    for ei, exp in enumerate(EXPERIMENTS):
-        print(f"Running experiment {ei}/{len(EXPERIMENTS)}: {exp.name}")
-        run_experiment(exp, data_size, rounds, plot_loss)
+    print(f"Running for {rounds} rounds with data_size {data_size}")
 
-
-if __name__ == '__main__':
-    main()
+    for ei, exp in enumerate(experiments):
+        print(f"Running experiment {ei + 1}/{len(experiments)}: {exp.name}")
+        run_experiment(base_name, exp, data_size, rounds, plot_loss)

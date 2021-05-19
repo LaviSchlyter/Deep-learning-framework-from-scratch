@@ -51,7 +51,8 @@ def calculate_different_params(rounds: int, epochs: int, dropout_p: float, weigh
             train_model(
                 model=model, optimizer=optimizer,
                 loss_func=loss_func, aux_loss_func=None, aux_weight=nan,
-                data=data, epochs=epochs
+                data=data, epochs=epochs,
+                batch_size=-1,
             )
 
             _, train_acc, _ = evaluate_model(

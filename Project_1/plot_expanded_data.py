@@ -9,7 +9,7 @@ def main():
     cols = 10
 
     data = load_data(rows)
-    data.expand_train_transform(cols, shuffle=False)
+    data.expand_train_transform(cols)
 
     fig = pyplot.figure()
     grid = ImageGrid(fig, 111, (rows, cols))
@@ -21,9 +21,8 @@ def main():
             ax = grid.axes_row[r][c]
             ax.imshow(data.train_x[i, 0, :, :])
 
-            print(data.train_digit[i, 0])
-
-    fig.show()
+    pyplot.savefig("output/expanded_data.png")
+    pyplot.show()
 
 if __name__ == '__main__':
     main()

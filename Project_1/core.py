@@ -26,10 +26,16 @@ def evaluate_model(
         a_pred = None
         b_pred = None
 
+    assert y_pred.shape[1] == 1, f"final prediction should have size 1, was {y_pred.shape}"
     y_pred = y_pred[:, 0]
 
     loss = loss_func(y_pred, y_float)
+
     if aux_loss_func is not None:
+        if isinstance(aux_loss_func, nn.NLLLoss):
+            assert a_pred.shape[1] == 10, f"digit prediction should have size 10, was {a_pred.shape}"
+            assert b_pred.shape[1] == 10, f"digit prediction should have size 10, was {b_pred.shape}"
+
         loss += aux_weight * (
                 aux_loss_func(a_pred, y_digit[:, 0]) +
                 aux_loss_func(b_pred, y_digit[:, 1])
@@ -49,18 +55,42 @@ def train_model(
         model: nn.Module,
         optimizer: optim.Optimizer,
         loss_func: nn.Module, aux_loss_func: Optional[nn.Module], aux_weight: float,
-        data: Data, epochs: int
+        data: Data, epochs: int, batch_size: int,
 ):
+    if batch_size == -1:
+        batch_size = len(data.train_x)
+    batch_count = len(data.train_x) // batch_size
+
     plot_data = torch.zeros(epochs, 6)
 
     for e in range(epochs):
-        model.train()
+        # training
+        data.shuffle_train()
+
+        for bi in range(batch_count):
+            batch_range = slice(bi * batch_size, (bi + 1) * batch_size)
+
+            model.train()
+            batch_train_loss, _, _ = evaluate_model(
+                model,
+                data.train_x[batch_range], data.train_y[batch_range], data.train_y_float[batch_range],
+                data.train_digit[batch_range],
+                loss_func, aux_weight, aux_loss_func
+            )
+
+            optimizer.zero_grad()
+            batch_train_loss.backward()
+            optimizer.step()
+
+        # train evaluation
+        model.eval()
         train_loss, train_acc, train_digit_acc = evaluate_model(
             model,
             data.train_x, data.train_y, data.train_y_float, data.train_digit,
             loss_func, aux_weight, aux_loss_func
         )
 
+        # test evaluation
         model.eval()
         test_loss, test_acc, test_digit_acc = evaluate_model(
             model,
@@ -68,14 +98,11 @@ def train_model(
             loss_func, aux_weight, aux_loss_func
         )
 
-        optimizer.zero_grad()
-        train_loss.backward()
-        optimizer.step()
-
         plot_data[e, :] = torch.tensor([
-            train_loss.item(), train_acc, train_digit_acc,
-            test_loss.item(), test_acc, test_digit_acc,
+            train_acc, train_digit_acc,
+            test_acc, test_digit_acc,
+            train_loss.item(), test_loss.item(),
         ])
 
-    plot_legend = "train_loss", "train_acc", "train_digit_acc", "test_loss", "test_acc", "test_digit_acc"
+    plot_legend = "train_acc", "train_digit_acc", "test_acc", "test_digit_acc", "train_loss", "test_loss"
     return plot_data, plot_legend
