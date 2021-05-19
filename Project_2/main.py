@@ -34,8 +34,6 @@ def network_1():
         Relu(),
         Linear(25, 25),
         Relu(),
-        Linear(25, 25),
-        Relu(),
         Linear(25,1),
         Sigmoid()
 
@@ -67,7 +65,7 @@ def main_share():
 
     optimizer = Adam(model.param())
     # optimizer = SGD(model.param(), 0.03 / n)
-    plot_data, plot_legend = train_model(model, optimizer, loss, data, epoch=400, log_loss=True)
+    plot_data, plot_legend = train_model(model, optimizer, loss, data, epoch=80, log_loss=True)
 
     plot_performance(plot_data, plot_legend, True)
     y_test = model(data.test_x)
@@ -78,8 +76,6 @@ def main_share():
 def main():
     # Disable the use of autograd from PyTorch
     torch.set_grad_enabled(False)
-
-
     model = network_1()
 
     # Generate the set of size n
@@ -98,7 +94,7 @@ def main():
     #optimizer = Adam(model.param(), alpha=0.0005)
     #optimizer = Adam(model.param())
     optimizer = SGD(model.param(), 1 / n, lambda_= 0)
-    plot_data, plot_legend = train_model(model, optimizer, loss, data, epoch=500, log_loss=False)
+    plot_data, plot_legend = train_model(model, optimizer, loss, data, epoch=80, log_loss=True)
 
     plot_performance(plot_data, plot_legend, True)
     y_test = model(data.test_x)
