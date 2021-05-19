@@ -1,16 +1,12 @@
-from Project_2.modules import *
-from Project_2.util import *
+from modules import *
+from loss import *
+from util import *
+from optimizer import *
 
 
 def basic_network_1():
     return Sequential([
-        Linear(2, 10),
-        Sigmoid(),
-        Linear(10, 25),
-        Sigmoid(),
-        Linear(25, 1),
-        Sigmoid()
-
+        Linear(2, 1),
     ])
 
 
@@ -20,14 +16,14 @@ def basic_network_WS_1():
         Tanh(),
         Linear(10, 25),
         Tanh(),
-        Linear(25, 10),
+
 
     ])
 
 
 def basic_network_WS_2():
     return Sequential([
-        Linear(20, 40),
+        Linear(50, 40),
         Relu(),
         Linear(40, 25),
         Relu(),
@@ -36,12 +32,12 @@ def basic_network_WS_2():
     ])
 
 
-def test_gradients(model, loss_func, data, eps=1e-4):
+def test_gradients(model, loss_func, data, eps=1e-6):
     Adam(model.param()).zero_grad()
     y_pred = model(data.train_x)
     loss = loss_func(y_pred, data.train_y)
     loss.backward()
-
+    MSE = 0
     for w in model.param():
         for i in range(w.value.flatten().shape[0]):
             w_prev = w.value.flatten()[i].item()
@@ -55,6 +51,7 @@ def test_gradients(model, loss_func, data, eps=1e-4):
             grad_est = (loss_plus.value - loss_minus.value) / (2 * eps)
             w.value.flatten()[i] = w_prev
             print(grad_est, "  ", w.grad.flatten()[i])
+
 
 
 def main():
@@ -74,12 +71,12 @@ def main():
     # Store in Data structure
     data = Data(train_x=train_input, train_y=train_target, test_x=test_input, test_y=test_target)
 
-    loss_func = LossBCE()
-    # loss_func = LossMSE()
+    #loss_func = LossBCE()
+    loss_func = LossMSE()
 
     optimizer = Adam(model.param())
     # optimizer = SGD(model.param(), 9/n)
-    plot_data, plot_legend = train_model(model, optimizer, loss_func, data, epoch=400, log_loss=False)
+    # plot_data, plot_legend = train_model(model, optimizer, loss_func, data, epoch=400, log_loss=False)
 
     test_gradients(model, loss_func, data)
 
@@ -120,5 +117,5 @@ def main_share():
 
 if __name__ == '__main__':
     main()
-    print("---------------------------------Sharing----------------------------------- ")
-    main_share()
+    #print("---------------------------------Sharing----------------------------------- ")
+    #main_share()
