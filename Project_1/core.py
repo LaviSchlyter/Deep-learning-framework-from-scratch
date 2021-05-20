@@ -21,10 +21,15 @@ def evaluate_model(
 
     if isinstance(output, tuple):
         y_pred, a_pred, b_pred = output
+
+        assert not torch.any(torch.isnan(y_pred)), "found nan value in a_pred"
+        assert not torch.any(torch.isnan(y_pred)), "found nan value in a_pred"
     else:
         y_pred = output
         a_pred = None
         b_pred = None
+
+    assert not torch.any(torch.isnan(y_pred)), "found nan value in y_pred"
 
     assert y_pred.shape[1] == 1, f"final prediction should have size 1, was {y_pred.shape}"
     y_pred = y_pred[:, 0]

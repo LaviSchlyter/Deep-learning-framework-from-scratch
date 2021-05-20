@@ -166,15 +166,12 @@ class WeightShareModel(PreprocessModel):
 class ProbOutputLayer(nn.Module):
     @staticmethod
     def forward(input):
-        eq_mask = torch.eye(10)[None, :, :].to(input.device)
-        lt_mask = torch.ones(10, 10).triu()[None, :, :].to(input.device)
+        lte_mask = torch.ones(10, 10).triu()[None, :, :].to(input.device)
 
         prob_a = input[:, 0, :, None]
         prob_b = input[:, 1, None, :]
 
         prob = prob_a * prob_b
-        prob_eq = (eq_mask * prob).sum(axis=(1, 2))
-        prob_lte = (lt_mask * prob).sum(axis=(1, 2))
+        prob_lte = (lte_mask * prob).sum(axis=(1, 2))
 
-        prob_lt = (prob_lte - prob_eq) / (1 - prob_eq)
-        return prob_lt[:, None].clamp(0, 1)
+        return prob_lte[:, None].clamp(0, 1)
