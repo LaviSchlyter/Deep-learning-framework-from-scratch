@@ -46,11 +46,7 @@ class Adam(Optimizer):
 
 class SGD(Optimizer):
     def __init__(self, params, lr, lambda_=0):
-        """
 
-        :param params: Parameters that will be updated
-        :param lr: The learning rate
-        """
         super().__init__(params)
         self.lambda_ = lambda_
         self.lr = lr
