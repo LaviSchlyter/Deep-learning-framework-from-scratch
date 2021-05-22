@@ -1,7 +1,7 @@
 from torch import nn
 
 from models import dense_network, WeightShareModel, full_conv_network, shared_conv_network, ProbOutputLayer, \
-    shared_resnet
+    shared_resnet, PreprocessModel
 from run_experiments import run_experiments, Experiment
 from util import InputNormalization
 
@@ -304,11 +304,18 @@ EXPERIMENT_CONV_SHARED_AUX_HEAD_BIGGER = Experiment(
 
 EXPERIMENT_RESNET = Experiment(
     name="Resnet, Shared, Aux",
-    epochs=200,
+    epochs=50,
+    batch_size=100,
 
     build_model=lambda: WeightShareModel(
         shared_resnet(output_size=10, res=True),
-        output_head=dense_network([20, 20, 1], nn.ReLU(), nn.Sigmoid()),
+        output_head=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
     ),
 
     build_loss=lambda: nn.BCELoss(),
@@ -318,7 +325,8 @@ EXPERIMENT_RESNET = Experiment(
 
 EXPERIMENT_RESNET_RESLESS = Experiment(
     name="Resnet resless, Shared, Aux",
-    epochs=200,
+    epochs=50,
+    batch_size=100,
 
     build_model=lambda: WeightShareModel(
         shared_resnet(output_size=10, res=False),
@@ -336,9 +344,25 @@ EXPERIMENT_RESNET_RESLESS = Experiment(
     build_aux_loss=lambda: nn.NLLLoss(),
 )
 
+EXPERIMENT_RESNET_RESLESS_PROB = Experiment(
+    name="Resnet resless, Shared, Aux, Prob",
+    epochs=50,
+    batch_size=100,
+
+    build_model=lambda: WeightShareModel(
+        shared_resnet(output_size=10, res=False),
+        output_head=ProbOutputLayer(),
+    ),
+
+    build_loss=lambda: nn.BCELoss(),
+    aux_weight=1.0,
+    build_aux_loss=lambda: nn.NLLLoss(),
+)
+
 EXPERIMENT_RESNET_RESLESS_MSE = Experiment(
-    name="Resnet resless, Shared, Aux MSE",
-    epochs=200,
+    name="Resnet resless, Shared, Aux, MSE",
+    epochs=50,
+    batch_size=100,
 
     build_model=lambda: WeightShareModel(
         shared_resnet(output_size=10, res=False),
@@ -356,18 +380,19 @@ EXPERIMENT_RESNET_RESLESS_MSE = Experiment(
     build_aux_loss=lambda: nn.NLLLoss(),
 )
 
-EXPERIMENT_RESNET_RESLESS_BATCHED = Experiment(
-    name="Resnet resless, Shared, Aux, Batched",
-    epochs=100,
+EXPERIMENT_RESNET_RESLESS_DUP = Experiment(
+    name="Resnet resless, Duplicated, Aux",
+    epochs=50,
+    batch_size=100,
 
-    build_model=lambda: WeightShareModel(
+    build_model=lambda: PreprocessModel(
+        shared_resnet(output_size=10, res=False),
         shared_resnet(output_size=10, res=False),
         output_head=nn.Sequential(
             nn.Flatten(),
-            nn.Linear(20, 40),
-            nn.Dropout(),
+            nn.Linear(20, 20),
             nn.ReLU(),
-            nn.Linear(40, 1),
+            nn.Linear(20, 1),
             nn.Sigmoid(),
         )
     ),
@@ -375,7 +400,6 @@ EXPERIMENT_RESNET_RESLESS_BATCHED = Experiment(
     build_loss=lambda: nn.BCELoss(),
     aux_weight=1.0,
     build_aux_loss=lambda: nn.NLLLoss(),
-    batch_size=100
 )
 
 EXPERIMENTS_EXPLORE = [
@@ -394,16 +418,17 @@ EXPERIMENTS_EXPLORE = [
     # EXPERIMENT_CONV_SHARED,
     # EXPERIMENT_CONV_SHARED_AUX,
     # EXPERIMENT_CONV_SHARED_AUX_10,
-    EXPERIMENT_CONV_SHARED_AUX_INV_10,
+    # EXPERIMENT_CONV_SHARED_AUX_INV_10,
     # EXPERIMENT_CONV_SHARED_AUX_INV_10_DROP,
     # EXPERIMENT_CONV_SHARED_AUX_INV_10_DECAY,
-    # EXPERIMENT_CONV_SHARED_AUX_INV_10_BATCH
     # EXPERIMENT_CONV_SHARED_AUX_EXPAND,
     # EXPERIMENT_CONV_SHARED_AUX_HEAD,
+
     # EXPERIMENT_RESNET,
     # EXPERIMENT_RESNET_RESLESS,
+    # EXPERIMENT_RESNET_RESLESS_DUP,
     # EXPERIMENT_RESNET_RESLESS_MSE,
-    # EXPERIMENT_RESNET_RESLESS_BATCHED,
+    EXPERIMENT_RESNET_RESLESS_PROB,
 ]
 
 if __name__ == '__main__':

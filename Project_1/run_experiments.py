@@ -33,7 +33,8 @@ class Experiment:
         return self.build_model(), self.build_loss(), None if self.build_aux_loss is None else self.build_aux_loss()
 
 
-def run_experiment(base_name: str, experiment: Experiment, data_size: int, rounds: int, plot_loss: bool):
+def run_experiment(base_name: str, experiment: Experiment, data_size: int, rounds: int, plot_loss: bool,
+                   plot_titles: bool):
     all_plot_data = None
     plot_legend = None
 
@@ -85,7 +86,8 @@ def run_experiment(base_name: str, experiment: Experiment, data_size: int, round
         ax.set_prop_cycle(None)
         ax.plot(plot_data_mean - plot_data_dev, '--', alpha=.5)
 
-    pyplot.title(experiment.name)
+    if plot_titles:
+        pyplot.title(experiment.name)
     ax.legend(plot_legend)
 
     ax.set_xlabel("epoch")
@@ -103,11 +105,10 @@ def run_experiment(base_name: str, experiment: Experiment, data_size: int, round
                     f" (min={plot_data_min[-1, i]:.3f}, max={plot_data_max[-1, i]:.3f})\n")
 
 
-def run_experiments(base_name: str, experiments: [Experiment]):
+def run_experiments(base_name: str, rounds: int, plot_titles: bool, experiments: [Experiment]):
     print(f"Running experiments '{base_name}'")
     os.makedirs(f"output/{base_name}", exist_ok=True)
 
-    rounds: int = 3
     data_size: int = 1000
     plot_loss: bool = True
 
@@ -115,4 +116,4 @@ def run_experiments(base_name: str, experiments: [Experiment]):
 
     for ei, exp in enumerate(experiments):
         print(f"Running experiment {ei + 1}/{len(experiments)}: {exp.name}")
-        run_experiment(base_name, exp, data_size, rounds, plot_loss)
+        run_experiment(base_name, exp, data_size, rounds, plot_loss, plot_titles)
