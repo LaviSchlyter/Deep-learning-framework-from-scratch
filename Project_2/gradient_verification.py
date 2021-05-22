@@ -107,7 +107,7 @@ def main_share():
     optimizer = Adam(model.param())
     # optimizer = SGD(model.param(), 0.03 / n)
 
-    plot_data, plot_legend = train_model(model, optimizer, loss_func, data, epoch=400, log_loss=False)
+    plot_data, plot_legend = train_model(model, optimizer, loss_func, data, epoch=400, log_epochs=False)
     test_gradients(model, loss_func, data)
     # test_gradients(model, loss_func, data)
 

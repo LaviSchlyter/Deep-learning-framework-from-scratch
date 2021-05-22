@@ -39,6 +39,9 @@ class HyperCube:
     def shape(self):
         return self.value.shape
 
+    def item(self):
+        return self.value.item()
+
 
 class CatGradFn:
     def __init__(self, input1, input2):
