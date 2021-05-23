@@ -75,7 +75,6 @@ class LinearGradFn:
     def backward(self, output_grad):
         self.b.backward(output_grad.sum(dim=0))
         self.W.backward((self.input_.value[:, :, None] @ output_grad[:, None, :]).sum(dim=0))
-
         input_grad = output_grad @ self.W.value.T
         self.input_.backward(input_grad)
 
