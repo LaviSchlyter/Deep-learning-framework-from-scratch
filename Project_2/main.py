@@ -14,6 +14,7 @@ EXTRA_PLOTS = True
 # TODO Video
 # TODO make simple architectures
 # TODO Output plot reports (labels, legends, no title)
+# TODO maybe plot input gradient instead of just the evaluation in the heatmap plot
 
 def network_WS_1():
     return Sequential([
@@ -107,7 +108,7 @@ def main_MSE_SGD():
         rounds=ROUNDS,
         n=DATA_SIZE,
         build_model=network_1,
-        build_optimizer=lambda param: SGD(param, 0.3 / DATA_SIZE, lambda_=0),
+        build_optimizer=lambda param: SGD(param, 0.3 / DATA_SIZE, lambda_=0.1),
         loss_func=LossMSE(),
         epochs=250,
         log_epochs=LOG_EPOCHS,

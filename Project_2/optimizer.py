@@ -46,7 +46,6 @@ class Adam(Optimizer):
 
 class SGD(Optimizer):
     def __init__(self, params, lr, lambda_=0):
-
         super().__init__(params)
         self.lambda_ = lambda_
         self.lr = lr
