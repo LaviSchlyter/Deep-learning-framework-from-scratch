@@ -1,6 +1,7 @@
 import torch
 
 from core import HyperCube, ones_like
+from modules import Module
 
 
 class LossMSE:
@@ -14,10 +15,11 @@ class LossMSE:
         :param target: Target HyperCube
         :return: The MSE loss between the predicted value and the target
         """
-        return HyperCube(1 / 2 * ((input_.value - target.value) ** 2).sum(dim=0), grad_fn=LossMSEGradFN(input_, target))
+        assert target.grad_fn is None, "The target HyperCube must not have a grad_fn"
+        return HyperCube(1 / 2 * ((input_.value - target.value) ** 2).mean(dim=0), grad_fn=LossMSEGradFN(input_, target))
 
-    @staticmethod
-    def param():
+
+    def param(self):
         """
 
         :return: Empty list because loss does not have parameters
@@ -51,13 +53,14 @@ class LossBCE:
         :return: The Binary Cross Entropy loss
         """
         assert torch.all(input_.value >= 0) and torch.all(input_.value <= 1), "Input values must be between [0,1]"
+        assert target.grad_fn is None, "The target HyperCube must not have a grad_fn"
 
         return HyperCube(-(target.value * input_.value.log().clamp(-100, float("inf")) + (1 - target.value) * (
                 1 - input_.value).log().clamp(-100, float("inf"))).sum(dim=0),
                          grad_fn=LossBCEGradFN(input_, target))
 
-    @staticmethod
-    def param():
+
+    def param(self):
         """
 
         :return: Empty list as loss does not have parameters
