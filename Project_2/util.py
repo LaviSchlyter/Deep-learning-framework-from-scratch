@@ -21,7 +21,6 @@ def normalize(train_x, test_x):
     mean, std = train_x.value.mean(), train_x.value.std()
     train_x.value.sub_(mean).div_(std)
     test_x.value.sub_(mean).div_(std)
-
     return train_x, test_x
 
 
@@ -63,8 +62,8 @@ def train_model(model, optimizer, loss_func, data, epoch, log_epochs):
         # Save values for data plotting
         plot_data[e, 0] = error_train
         plot_data[e, 1] = error_test
-        plot_data[e, 2] = cost_train.value / n
-        plot_data[e, 3] = cost_test.value / n
+        plot_data[e, 2] = cost_train.value
+        plot_data[e, 3] = cost_test.value
 
         cost_train.backward()
         optimizer.step()
@@ -144,9 +143,16 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
         fig = plt.figure(figsize=(7, 7))
 
         y_train_pred = model(data.train_x)
+        y_test_pred = model(data.test_x)
+        y_test_bool_pred = (y_test_pred.value > 0.5)
+        boolean_falsely_predicted = (y_test_bool_pred != data.test_y.value)
+        coordinate_false = data.test_x.value[boolean_falsely_predicted.squeeze(1)]
+        print("coord", coordinate_false.shape)
+
         y_train_bool_pred = (y_train_pred.value > 0.5).squeeze(1)
         plt.scatter(data.train_x.value[y_train_bool_pred, 0], data.train_x.value[y_train_bool_pred, 1], color="red")
         plt.scatter(data.train_x.value[~y_train_bool_pred, 0], data.train_x.value[~y_train_bool_pred, 1], color="blue")
+
 
         xmin, xmax, ymin, ymax = plt.axis()
         fig.savefig(f"data/{name}/distribution_points.png")
@@ -160,11 +166,13 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
         image_input = torch.cat([image_input_x.reshape(-1, 1), image_input_y.reshape(-1, 1)], dim=1)
         image_output = model(HyperCube(image_input))
         import matplotlib
-        cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", ["blue", "yellow", "red"])
+        cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", [(0,"blue"), (0.5,"yellow"), (1,"red")])
         fig = plt.figure(figsize=(7, 7))
-        plt.imshow(image_output.value.reshape(-1, 1000), cmap=cmap)
-        import numpy as np
-        plt.xticks(np.linspace(100, 901, 7), ["-1.5", "-1", "-0.5", "0.0", "0.5", "1.0", "1.5"])
-        plt.yticks(np.linspace(100, 901, 7), ["1.5", "1", "0.5", "0.0", "-0.5", "-1.0", "-1.5"])
+
+
+        plt.imshow(image_output.value.reshape(-1, 1000).rot90(k=1), cmap=cmap, extent= (xmin, xmax,ymin, ymax))
+        circle1 = plt.Circle((0, 0), math.sqrt(6)/math.sqrt(math.pi), color='black', fill=False)
+        plt.gca().add_patch(circle1)
+        plt.scatter(coordinate_false[:, 0], coordinate_false[:, 1], 40, color="black", marker="x")
         fig.savefig(f"data/{name}/density_correct.png")
         plt.show()
