@@ -117,7 +117,8 @@ class Sigmoid(Module):
 
     @staticmethod
     def sigmoid(input_):
-        return 1 / (1 + (-input_).exp())
+        # Workaround to stop SegFaults in the VM from .exp
+        return 1 / (1 + math.e ** (-input_))
 
 
 class SigmoidGradFn:
