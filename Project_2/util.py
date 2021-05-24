@@ -1,7 +1,7 @@
 import math
 import os
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import torch
 
 from core import HyperCube
@@ -122,6 +122,8 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
     # print the final test/train error
     print(f"Train error: {plot_data_mean[-1, 0]:.4f} +- {plot_data_std[-1, 0]:.4f}, min/max: {plot_data_min[0]}/{plot_data_max[0]}")
     print(f"Test error: {plot_data_mean[-1, 1]:.4f} +- {plot_data_std[-1, 1]:.4f}, min/max: {plot_data_min[1]}/{plot_data_max[1]}")
+
+    return
 
     # training plot
     fig, ax = plt.subplots(1)
