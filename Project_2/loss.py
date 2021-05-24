@@ -5,7 +5,6 @@ from modules import Module
 
 
 class LossMSE:
-
     def __call__(self, input_, target):
         """
         Mean Squared Error [MSE]
@@ -16,8 +15,7 @@ class LossMSE:
         :return: The MSE loss between the predicted value and the target
         """
         assert target.grad_fn is None, "The target HyperCube must not have a grad_fn"
-        return HyperCube(1 / 2 * ((input_.value - target.value) ** 2).mean(dim=0), grad_fn=LossMSEGradFN(input_, target))
-
+        return HyperCube(1 / 2 * ((input_.value - target.value) ** 2).mean(dim=0), grad_fn=LossMSEGradFn(input_, target))
 
     def param(self):
         """
@@ -26,7 +24,7 @@ class LossMSE:
         return []
 
 
-class LossMSEGradFN:
+class LossMSEGradFn:
     def __init__(self, input_, target):
         self.target = target
         self.input_ = input_
@@ -57,7 +55,7 @@ class LossBCE:
 
         return HyperCube(-(target.value * input_.value.log().clamp(-100, float("inf")) + (1 - target.value) * (
                 1 - input_.value).log().clamp(-100, float("inf"))).mean(dim=0),
-                         grad_fn=LossBCEGradFN(input_, target))
+                         grad_fn=LossBCEGradFn(input_, target))
 
 
     def param(self):
@@ -67,7 +65,7 @@ class LossBCE:
         return []
 
 
-class LossBCEGradFN:
+class LossBCEGradFn:
 
     def __init__(self, input_, target):
         """
