@@ -189,5 +189,10 @@ REPORT_EXPERIMENTS = [
 
 ]
 
-if __name__ == '__main__':
+
+def main():
     run_experiments("report", rounds=3, plot_titles=False, experiments=REPORT_EXPERIMENTS)
+
+
+if __name__ == '__main__':
+    main()
