@@ -4,7 +4,7 @@ from math import prod
 from typing import Callable, Optional
 
 import torch
-from matplotlib import pyplot
+# from matplotlib import pyplot
 from torch import optim, nn
 
 from core import train_model
@@ -75,6 +75,8 @@ def run_experiment(base_name: str, experiment: Experiment, data_size: int, round
     plot_data_dev, plot_data_mean = torch.std_mean(all_plot_data, dim=0)
     plot_data_min, _ = torch.min(all_plot_data, dim=0)
     plot_data_max, _ = torch.max(all_plot_data, dim=0)
+
+    return
 
     # actually start plotting
     fig, ax = pyplot.subplots(1)
