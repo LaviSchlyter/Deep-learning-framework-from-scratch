@@ -1,6 +1,6 @@
 from torch import nn
 
-from models import PreprocessModel, WeightShareModel
+from models import PreprocessModel, WeightShareModel, shared_resnet, ProbOutputLayer
 from run_experiments import run_experiments, Experiment
 
 
@@ -66,9 +66,15 @@ EXPERIMENT_BCE_REG = Experiment(
 )
 
 
-def build_conv_model(batch_norm: bool, conv_dropout: float, linear_dropout: float):
+def build_conv_model(input_channels: int, output_size: int, batch_norm: bool, conv_dropout: float,
+                     linear_dropout: float):
+    if output_size == 1:
+        final_activation = nn.Sigmoid()
+    else:
+        final_activation = nn.Softmax()
+
     return nn.Sequential(
-        nn.Conv2d(2, 16, (3, 3)),
+        nn.Conv2d(input_channels, 16, (3, 3)),
         nn.Dropout(conv_dropout),
         *[nn.BatchNorm2d(16)] * batch_norm,
         nn.MaxPool2d((2, 2)),
@@ -81,65 +87,44 @@ def build_conv_model(batch_norm: bool, conv_dropout: float, linear_dropout: floa
         nn.Dropout(linear_dropout),
         *[nn.BatchNorm1d(32)] * batch_norm,
         nn.ReLU(),
-        nn.Linear(32, 1),
-        nn.Sigmoid(),
+        nn.Linear(32, output_size),
+        final_activation
     )
 
 
-EXPERIMENTS_CONV = [
-    Experiment(
-        name="Conv",
-        epochs=80,
-        build_model=lambda: build_conv_model(False, 0.0, 0.0),
-        build_loss=nn.BCELoss,
-    ),
-    Experiment(
-        name="Conv + BatchNorm",
-        epochs=80,
-        build_model=lambda: build_conv_model(True, 0.0, 0.0),
-        build_loss=nn.BCELoss,
-    ),
-    Experiment(
-        name="Conv + Dropout",
-        epochs=400,
-        build_model=lambda: build_conv_model(False, 0.0, 0.5),
-        build_loss=nn.BCELoss,
-    ),
-    Experiment(
-        name="Conv + BatchNorm + Dropout",
-        epochs=160,
-        build_model=lambda: build_conv_model(True, 0.0, 0.5),
-        build_loss=nn.BCELoss,
-    )
-]
+EXPERIMENT_CONV = Experiment(
+    name="Conv",
+    epochs=80,
+    build_model=lambda: build_conv_model(2, 1, False, 0.0, 0.0),
+    build_loss=nn.BCELoss,
+)
+EXPERIMENT_CONV_BN = Experiment(
+    name="Conv + BatchNorm",
+    epochs=80,
+    build_model=lambda: build_conv_model(2, 1, True, 0.0, 0.0),
+    build_loss=nn.BCELoss,
+)
+EXPERIMENT_CONV_DROP = Experiment(
+    name="Conv + Dropout",
+    epochs=400,
+    build_model=lambda: build_conv_model(2, 1, False, 0.0, 0.5),
+    build_loss=nn.BCELoss,
+)
+EXPERIMENT_CONV_DROP_BN = Experiment(
+    name="Conv + BatchNorm + Dropout",
+    epochs=160,
+    build_model=lambda: build_conv_model(2, 1, True, 0.0, 0.5),
+    build_loss=nn.BCELoss,
+)
 
-
-def build_digit_conv_network():
-    return nn.Sequential(
-        nn.Conv2d(1, 32, (5, 5)),
-        nn.MaxPool2d(2),
-        nn.ReLU(),
-        nn.BatchNorm2d(32),
-        nn.Conv2d(32, 64, (5, 5)),
-        nn.ReLU(),
-        nn.BatchNorm2d(64),
-        nn.Flatten(),
-        nn.Linear(64, 50),
-        nn.ReLU(),
-        nn.BatchNorm1d(50),
-        nn.Linear(50, 10),
-        nn.Softmax(),
-    )
-
-
-EXPERIMENT_CONV_AUX_DUPLICATED = Experiment(
-    name="Conv + Aux, duplicated",
-    epochs=40,
+EXPERIMENT_CONV_DUPLICATED = Experiment(
+    name="Duplicated",
+    epochs=20,
     batch_size=100,
 
     build_model=lambda: PreprocessModel(
-        a_input_module=build_digit_conv_network(),
-        b_input_module=build_digit_conv_network(),
+        a_input_module=build_conv_model(1, 10, True, 0.1, 0.5),
+        b_input_module=build_conv_model(1, 10, True, 0.1, 0.5),
         output_head=nn.Sequential(
             nn.Flatten(),
             nn.Linear(20, 20),
@@ -150,18 +135,158 @@ EXPERIMENT_CONV_AUX_DUPLICATED = Experiment(
     ),
 
     build_loss=nn.BCELoss,
-    aux_weight=1.0,
-    build_aux_loss=nn.NLLLoss,
+)
+EXPERIMENT_CONV_SHARED = Experiment(
+    name="Shared",
+    epochs=20,
+    batch_size=100,
 
+    build_model=lambda: WeightShareModel(
+        input_module=build_conv_model(1, 10, True, 0.1, 0.5),
+        output_head=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    build_loss=nn.BCELoss,
 )
 
-EXPERIMENT_CONV_AUX_SHARED = Experiment(
-    name="Conv + Aux, shared",
+AUX_EPOCHS = 70
+
+EXPERIMENT_CONV_DUPLICATED_AUX = Experiment(
+    name="Duplicated Aux",
+    epochs=AUX_EPOCHS,
+    batch_size=100,
+
+    build_model=lambda: PreprocessModel(
+        a_input_module=build_conv_model(1, 10, True, 0.1, 0.5),
+        b_input_module=build_conv_model(1, 10, True, 0.1, 0.5),
+        output_head=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    build_loss=nn.BCELoss,
+    aux_weight=1,
+    build_aux_loss=nn.NLLLoss,
+)
+EXPERIMENT_CONV_SHARED_AUX = Experiment(
+    name="Shared Aux",
+    epochs=AUX_EPOCHS,
+    batch_size=100,
+
+    build_model=lambda: WeightShareModel(
+        input_module=build_conv_model(1, 10, True, 0.1, 0.5),
+        output_head=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    build_loss=nn.BCELoss,
+    aux_weight=1,
+    build_aux_loss=nn.NLLLoss,
+)
+EXPERIMENT_CONV_SHARED_AUX_LESS = Experiment(
+    name="Shared Aux w0.1",
+    epochs=AUX_EPOCHS,
+    batch_size=100,
+
+    build_model=lambda: WeightShareModel(
+        input_module=build_conv_model(1, 10, True, 0.1, 0.5),
+        output_head=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    build_loss=nn.BCELoss,
+    aux_weight=0.1,
+    build_aux_loss=nn.NLLLoss,
+)
+EXPERIMENT_CONV_SHARED_AUX_MORE = Experiment(
+    name="Shared Aux w10",
+    epochs=AUX_EPOCHS,
+    batch_size=100,
+
+    build_model=lambda: WeightShareModel(
+        input_module=build_conv_model(1, 10, True, 0.1, 0.5),
+        output_head=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    build_loss=nn.BCELoss,
+    aux_weight=10,
+    build_aux_loss=nn.NLLLoss,
+)
+EXPERIMENT_CONV_SHARED_AUX_MORE_MORE = Experiment(
+    name="Shared Aux w100",
+    epochs=AUX_EPOCHS,
+    batch_size=100,
+
+    build_model=lambda: WeightShareModel(
+        input_module=build_conv_model(1, 10, True, 0.1, 0.5),
+        output_head=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    build_loss=nn.BCELoss,
+    aux_weight=100,
+    build_aux_loss=nn.NLLLoss,
+)
+
+EXPERIMENT_RESNET = Experiment(
+    name="Resnet",
+    epochs=120,
+    batch_size=100,
+
+    build_model=lambda: WeightShareModel(
+        input_module=shared_resnet(10, True),
+        output_head=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
+
+    build_loss=nn.BCELoss,
+    aux_weight=10,
+    build_aux_loss=nn.NLLLoss,
+)
+
+EXPERIMENT_RESNET_RESLESS = Experiment(
+    name="Resnet resless",
     epochs=40,
     batch_size=100,
 
     build_model=lambda: WeightShareModel(
-        input_module=build_digit_conv_network(),
+        input_module=shared_resnet(10, False),
         output_head=nn.Sequential(
             nn.Flatten(),
             nn.Linear(20, 20),
@@ -172,7 +297,22 @@ EXPERIMENT_CONV_AUX_SHARED = Experiment(
     ),
 
     build_loss=nn.BCELoss,
-    aux_weight=1.0,
+    aux_weight=10,
+    build_aux_loss=nn.NLLLoss,
+)
+
+EXPERIMENT_RESNET_RESLESS_PROB = Experiment(
+    name="Resnet resless, Probability output",
+    epochs=40,
+    batch_size=100,
+
+    build_model=lambda: WeightShareModel(
+        input_module=shared_resnet(10, False),
+        output_head=ProbOutputLayer()
+    ),
+
+    build_loss=nn.BCELoss,
+    aux_weight=10,
     build_aux_loss=nn.NLLLoss,
 )
 
@@ -182,12 +322,24 @@ REPORT_EXPERIMENTS = [
     # EXPERIMENT_BCE_REG,
     # EXPERIMENT_BCE_SMALLER,
 
-    *EXPERIMENTS_CONV,
+    # EXPERIMENT_CONV,
+    # EXPERIMENT_CONV_BN,
+    # EXPERIMENT_CONV_DROP,
+    # EXPERIMENT_CONV_DROP_BN,
 
-    # EXPERIMENT_CONV_AUX_DUPLICATED,
-    # EXPERIMENT_CONV_AUX_SHARED,
+    # EXPERIMENT_CONV_DUPLICATED,
+    # EXPERIMENT_CONV_SHARED,
 
+    # EXPERIMENT_CONV_DUPLICATED_AUX,
+    # EXPERIMENT_CONV_SHARED_AUX_LESS,
+    # EXPERIMENT_CONV_SHARED_AUX,
+    # EXPERIMENT_CONV_SHARED_AUX_MORE,
+    # EXPERIMENT_CONV_SHARED_AUX_MORE_MORE,
+
+    EXPERIMENT_RESNET,
+    EXPERIMENT_RESNET_RESLESS,
+    EXPERIMENT_RESNET_RESLESS_PROB,
 ]
 
 if __name__ == '__main__':
-    run_experiments("report", rounds=3, plot_titles=False, experiments=REPORT_EXPERIMENTS)
+    run_experiments("report", rounds=4, plot_titles=True, experiments=REPORT_EXPERIMENTS)

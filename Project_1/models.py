@@ -13,6 +13,12 @@ class ViewModule(nn.Module):
         return input.view(*self.shape)
 
 
+class ShapePrintModule(nn.Module):
+    def forward(self, input):
+        print(input.shape)
+        return input
+
+
 def dense_network(
         sizes: List[int],
         activation: Optional[nn.Module], last_activation: nn.Module,
@@ -123,11 +129,11 @@ def shared_resnet(output_size: int, res: bool):
         ResnetBlock(32, res),
 
         nn.Flatten(),
-        nn.Linear(32 * 7 * 7, 50),
+        nn.Linear(32 * 7 * 7, 32),
         nn.Dropout(),
         nn.ReLU(),
-        nn.Linear(50, output_size),
-        nn.Softmax(),
+        nn.Linear(32, output_size),
+        nn.Softmax(-1),
     )
 
 
