@@ -12,7 +12,7 @@ Features include:
 from architectures import *
 ROUNDS = 1
 DATA_SIZE = 1000
-LOG_EPOCHS = False
+LOG_EPOCHS = True
 EXTRA_PLOTS = True
 
 if __name__ == '__main__':
