@@ -1,5 +1,5 @@
 # File containing the different architectures tested
-
+from core import WeightSharing
 from loss import *
 from modules import *
 from util import *
