@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import torch
 from core import HyperCube
 
+# TODO Figure out what to do with the plotting part
+
 def set_plot_font_size():
     """Set larger font sizes for pyplot."""
     params = { "legend.fontsize": "large", "axes.labelsize": "large", "axes.titlesize": "large", "xtick.labelsize": "large",
