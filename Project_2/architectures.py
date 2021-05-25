@@ -1,5 +1,5 @@
 # File containing the different architectures tested
-from core import WeightSharing
+
 from loss import *
 from modules import *
 from util import *
@@ -8,8 +8,6 @@ from test import ROUNDS, DATA_SIZE, LOG_EPOCHS, EXTRA_PLOTS
 
 def network_WS_1():
     """ First part of the Weight Sharing network
-
-    :return: Sequential
     """
     return Sequential([
         Linear(1, 10),
