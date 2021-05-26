@@ -1,9 +1,8 @@
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import ImageGrid
-
 from util import load_data
 
-
+# TODO Remove
 def main():
     rows = 10
     cols = 10
