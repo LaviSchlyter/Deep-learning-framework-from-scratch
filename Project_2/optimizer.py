@@ -3,9 +3,13 @@ from abc import ABC, abstractmethod
 class Optimizer(ABC):
 
     def __init__(self, params):
-        self.params = params  # model parameters
+        self.params = params
 
     def zero_grad(self):
+        """ Sets the parameters gradient to zero
+
+        This operation is necessary because the gradients accumulate
+        """
         for param in self.params:
             param.zero_grad()
 
@@ -17,7 +21,6 @@ class Optimizer(ABC):
 class Adam(Optimizer):
     def __init__(self, params, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
         """
-
         :param params: Parameters that will be updated
         :param alpha: The learning rate or step size
         :param beta1: The exponential decay rate for the first moment estimates
@@ -34,6 +37,8 @@ class Adam(Optimizer):
         self.v = [0] * len(self.params)
 
     def step(self):
+        """ Update the weights
+        """
         self.t += 1
         for i, param in enumerate(self.params):
             self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * param.grad
@@ -45,7 +50,13 @@ class Adam(Optimizer):
 
 
 class SGD(Optimizer):
+
     def __init__(self, params, lr, lambda_=0):
+        """
+        :param params: Parameters of the model which are to be optimized
+        :param lr: The learning rate
+        :param lambda_: The weight decay used to penalize large weights
+        """
         super().__init__(params)
         self.lambda_ = lambda_
         self.lr = lr

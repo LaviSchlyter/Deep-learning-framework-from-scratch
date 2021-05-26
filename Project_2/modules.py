@@ -1,11 +1,10 @@
+
 import math
 from abc import abstractmethod
-
 import torch
-
 from core import HyperCube
 
-
+# TODO: Continue commenting
 class Module:
 
     @abstractmethod
@@ -16,13 +15,26 @@ class Module:
     def param(self):
         pass
 
+
 class WeightSharing(Module):
 
     def __init__(self, input_module, output_module):
+        """ Combines any two networks used in showcasing weight sharing
+
+        :param input_module: Network which will be shared by both HyperCubes
+        :param output_module: Network used when both HyperCubes have been concatenated
+        """
         self.output_module = output_module
         self.input_module = input_module
 
     def __call__(self, input_):
+        """ Calls the combined model on the input
+
+        The self.input_module is used on part of the input, then on the second part.
+        The self.output_module is then applied on the concatenation of the output given by the previous step
+        :param input_:
+        :return:
+        """
         hidden_x = self.input_module(input_[0])
         hidden_y = self.input_module(input_[1])
 
@@ -35,6 +47,11 @@ class WeightSharing(Module):
 
 
 class Sequential(Module):
+    """ Gets a list of modules which form the network
+
+    Sequential takes in a list of modules in the order they should be carried out through the network
+    When calling Sequential, it loops through all the layers (modules) and applies it on the input
+    """
     def __init__(self, layers):
         self.layers = layers
 
@@ -51,14 +68,27 @@ class Sequential(Module):
         return par
 
 
-# Layers
+
 class Linear(Module):
 
     def __init__(self, Din, Dout):
+        """ Randomly initializes the weights given the input and output dimension
+        TODO: Add what the second part is used for
+        The parameters are initialized using a uniform distribution
+        :param Din: Input dimension of the layer
+        :param Dout: Output dimension of the layer
+        """
         self.W = HyperCube(torch.empty([Din, Dout]).uniform_() * (2 / math.sqrt(Din)) - 1 / math.sqrt(Din))
         self.b = HyperCube(torch.empty([Dout]).uniform_())
 
     def __call__(self, input_):
+        """ Applies the linear layer on the input
+
+        The linear layer is defined as : y = X.W + b
+        where X is the input, W and b the parameters
+        :param input_: HyperCube input into the layer
+        :return: HyperCube containing the computation and a grad_fn corresponding to the layer
+        """
         # Takes input_ of shape NxD and W of DxM
         return HyperCube(input_.value @ self.W.value + self.b.value, grad_fn=LinearGradFn(input_, self.W, self.b))
 

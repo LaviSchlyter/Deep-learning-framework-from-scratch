@@ -1,5 +1,4 @@
 import os
-
 import torch
 from matplotlib import pyplot
 from torch import nn, optim
@@ -10,6 +9,7 @@ from util import load_data, InputNormalization
 
 nan = float("nan")
 
+# TODO : remove ?
 
 def build_network(dropout_p: float, depth: int, size: int):
     layers = [nn.Flatten()]

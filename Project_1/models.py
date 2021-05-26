@@ -24,10 +24,18 @@ def dense_network(
         activation: Optional[nn.Module], last_activation: nn.Module,
         batch_norm: bool = False
 ):
+    """ Build a dense network
+
+    :param sizes: List of the input and output sizes in consecutive order for the different layers used
+    :param activation: Activation functions used throughout the network
+    :param last_activation: Activation function used in the last layer
+    :param batch_norm: Boolean on whether to add bath normalization
+    :return: A dense network using the different variables given
+    """
     assert len(sizes) >= 0, "Dense network needs at least an input size"
 
     layers = [
-        nn.Flatten()
+        nn.Flatten() # TODO: Why ?
     ]
 
     prev_size = sizes[0]
@@ -53,7 +61,6 @@ def full_conv_network():
     return nn.Sequential(
         nn.Conv2d(2, 32, (5, 5)),
         nn.MaxPool2d(2),
-        # nn.ReLU(), # TODO why does adding this lower performance?
         nn.Conv2d(32, 64, (5, 5)),
         nn.ReLU(),
         nn.Flatten(),
@@ -65,6 +72,12 @@ def full_conv_network():
 
 
 def shared_conv_network(last_activation: nn.Module, output_size: int):
+    """ Shared convolutional neural network
+
+    :param last_activation: Last activation function module
+    :param output_size: Output size of the shared network
+    :return: Sequential
+    """
     return nn.Sequential(
         nn.Conv2d(1, 32, (5, 5)),
         nn.MaxPool2d(2),
@@ -87,6 +100,11 @@ def shared_conv_network(last_activation: nn.Module, output_size: int):
 # Resnet code based on https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
 class ResnetBlock(nn.Module):
     def __init__(self, channels: int, res=True):
+        """
+
+        :param channels:
+        :param res:
+        """
         super().__init__()
 
         self.res = res
@@ -150,7 +168,7 @@ class PreprocessModel(nn.Module):
         self.digit_head = digit_head
 
     def forward(self, input):
-        # keep the channel axis to make convolutional networks easier to implement
+        # Keep the channel axis to make convolutional networks easier to implement
         hidden_a = self.a_input_module(input[:, 0, None])
         hidden_b = self.b_input_module(input[:, 1, None])
 

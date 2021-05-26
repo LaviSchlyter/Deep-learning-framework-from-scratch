@@ -1,7 +1,11 @@
-from torch import nn
+""" Experiments reported in the project
+
+The following framework is used in order to produce the networks described in the report
+"""
 
 from models import PreprocessModel, WeightShareModel, shared_resnet, ProbOutputLayer
 from run_experiments import run_experiments, Experiment
+from torch import nn
 
 
 def build_simple_dense_model(dropout=0.0):
@@ -18,6 +22,7 @@ def build_simple_dense_model(dropout=0.0):
     )
 
 
+# Same model as above with twice less nodes
 def build_simple_dense_model_smaller(dropout=0.0):
     return nn.Sequential(
         nn.Flatten(),
@@ -49,6 +54,7 @@ EXPERIMENT_BCE = Experiment(
 )
 
 EXPERIMENT_BCE_SMALLER = Experiment(
+    # TODO Probably add smaller in the name ?
     name="Dense BCE",
     epochs=20,
     batch_size=100,
@@ -66,8 +72,19 @@ EXPERIMENT_BCE_REG = Experiment(
 )
 
 
-def build_conv_model(input_channels: int, output_size: int, batch_norm: bool, conv_dropout: float,
-                     linear_dropout: float):
+def build_conv_model(
+        input_channels: int, output_size: int,
+        batch_norm: bool,
+        conv_dropout: float, linear_dropout: float
+):
+    """ Building a convolutional model
+
+    :param batch_norm: Whether to include bath normalization or not
+    :param conv_dropout: Ratio of feature detectors  to drop in the convolutional layers
+    :param linear_dropout: Ratio of feature detectors  to drop in the linear layers
+    :return: Sequential containing the layers passed
+    """
+
     if output_size == 1:
         final_activation = nn.Sigmoid()
     else:
@@ -125,6 +142,7 @@ EXPERIMENT_CONV_FLIP = Experiment(
     expand_flip=True,
 )
 
+# TODO: what do you mean by duplicated
 EXPERIMENT_CONV_DUPLICATED = Experiment(
     name="Duplicated",
     epochs=20,
@@ -270,23 +288,23 @@ EXPERIMENT_CONV_SHARED_AUX_MORE_MORE = Experiment(
 EXPERIMENT_RESNET = Experiment(
     name="Resnet",
     epochs=120,
-    batch_size=100,
+        batch_size=100,
 
-    build_model=lambda: WeightShareModel(
-        input_module=shared_resnet(10, True),
-        output_head=nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(20, 20),
-            nn.ReLU(),
-            nn.Linear(20, 1),
-            nn.Sigmoid(),
-        )
-    ),
+        build_model=lambda: WeightShareModel(
+            input_module=shared_resnet(10, True),
+            output_head=nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(20, 20),
+                nn.ReLU(),
+                nn.Linear(20, 1),
+                nn.Sigmoid(),
+            )
+        ),
 
-    build_loss=nn.BCELoss,
-    aux_weight=10,
-    build_aux_loss=nn.NLLLoss,
-)
+        build_loss=nn.BCELoss,
+        aux_weight=10,
+        build_aux_loss=nn.NLLLoss,
+    )
 
 EXPERIMENT_RESNET_RESLESS = Experiment(
     name="Resnet resless",
@@ -329,10 +347,8 @@ REPORT_EXPERIMENTS = [
     EXPERIMENT_MSE,
     # EXPERIMENT_BCE_REG,
     # EXPERIMENT_BCE_SMALLER,
-
     EXPERIMENT_CONV,
     EXPERIMENT_CONV_FLIP,
-
     EXPERIMENT_CONV_BN,
     # EXPERIMENT_CONV_DROP,
     # EXPERIMENT_CONV_DROP_BN,

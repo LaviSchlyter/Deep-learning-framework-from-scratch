@@ -1,23 +1,46 @@
 import math
 import os
-
 import matplotlib.pyplot as plt
 import torch
-
 from core import HyperCube
 
+# TODO Figure out what to do with the plotting part
+
+def set_plot_font_size():
+    """Set larger font sizes for pyplot."""
+    params = { "legend.fontsize": "large", "axes.labelsize": "large", "axes.titlesize": "large", "xtick.labelsize": "large",
+               "ytick.labelsize": "large" }
+    plt.rcParams.update(params)
 
 def generate_disc_set(nb):
+    """ Generate a disk of radius 1/sqrt(2*pi)
+
+    :param nb: Number of points wanted
+    :return: HyperCube with the x coordinates and with the y targets
+    """
     input_ = torch.empty(nb, 2).uniform_()
     target = ((input_ - 0.5).pow(2).sum(1) < 1 / (2 * math.pi)).float()
     return HyperCube(input_), HyperCube(target[:, None])
 
 
 def evaluate_error(pred, target):
+    """ Compute the error rate
+
+    :param pred: HyperCube with the predicted values from model
+    :param target: HyperCube with the target values
+    :return: The error rate between target and predicted
+    """
     return 1 - ((pred.value > 0.5) == (target.value > 0.5)).sum() / len(pred.value)
 
 
 def normalize(train_x, test_x):
+    """ Normalize the data
+
+    We retrieve the mean and std of the training data and apply normalization on both the training and test data
+    :param train_x: HyperCube of training data
+    :param test_x:HyperCube of test data
+    :return: HyperCubes normalized
+    """
     mean, std = train_x.value.mean(), train_x.value.std()
     train_x.value.sub_(mean).div_(std)
     test_x.value.sub_(mean).div_(std)
@@ -33,25 +56,27 @@ class Data:
 
     @classmethod
     def generate(cls, n: int):
+        """
+
+        :param n: Number of data to generate
+        :return: a Data struct containing the train, test inputs and targets
+        """
         train_input, train_target = generate_disc_set(n)
         test_input, test_target = generate_disc_set(n)
-
         train_input, test_input = normalize(train_input, test_input)
-
         return Data(train_x=train_input, train_y=train_target, test_x=test_input, test_y=test_target)
 
 
-PLOT_LEGEND = ["train_error", "test_error", "train_loss", "test_loss"]
+PLOT_LEGEND = ["Train_error", "Test_error", "Train_loss", "Test_loss"]
 
 
 def train_model(model, optimizer, loss_func, data, epoch, log_epochs):
+
     plot_data = torch.empty(epoch, len(PLOT_LEGEND))
-    n = data.train_x.shape[0] + data.test_x.shape[0]
 
     for e in range(epoch):
 
         optimizer.zero_grad()
-        # Train evaluation
 
         y_train = model(data.train_x)
         cost_train, error_train = evaluate_model(y_train, data.train_y, loss_func)
@@ -69,19 +94,27 @@ def train_model(model, optimizer, loss_func, data, epoch, log_epochs):
         optimizer.step()
 
         if log_epochs:
+            # Printing the losses
             loss_name = type(loss_func).__name__
             print(
-                f"For epoch = {e} with {loss_name}: "
-                f"train_loss = {cost_train.item():.4f}, "
-                f"train_error={error_train:.4f}, "
-                f"test_loss = {cost_test.item():.4f}, "
-                f"test_error={error_test:.4f}"
+                f"For Epoch = {e} with {loss_name}: "
+                f"Train_loss = {cost_train.item():.4f}, "
+                f"Train_error={error_train:.4f}, "
+                f"Test_loss = {cost_test.item():.4f}, "
+                f"Test_error={error_test:.4f}"
             )
 
     return plot_data
 
 
 def evaluate_model(pred_y, true_y, loss_func):
+    """ Evaluating both the loss and the accuracy (error)
+
+    :param pred_y: HyperCube of predicted values
+    :param true_y: HyperCube of target values
+    :param loss_func: Loss function used
+    :return: The cost and the error
+    """
     cost = loss_func(pred_y, true_y)
     error = evaluate_error(pred_y, true_y)
     return cost, error
@@ -92,6 +125,18 @@ def run_experiment(
         build_model, build_optimizer, loss_func, epochs, log_epochs: bool,
         extra_plots: bool
 ):
+    """
+
+    :param name: Name of the experiment :str
+    :param rounds: Number of rounds : int
+    :param n: Number of data that is to be generated : int
+    :param build_model: Network used
+    :param build_optimizer:Optimizer used
+    :param loss_func: Loss function used
+    :param epochs: Number of epochs:int
+    :param log_epochs: Whether to print the losses or not : Bool
+    :param extra_plots: Whether to print final plots or not : Bool
+    """
     print(f"Running experiment {name}")
 
     all_plot_data = torch.zeros(rounds, epochs, len(PLOT_LEGEND))
@@ -116,14 +161,12 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
     os.makedirs(f"data/{name}", exist_ok=True)
 
     plot_data_std, plot_data_mean = torch.std_mean(all_plot_data, dim=0)
-    plot_data_max = all_plot_data[:, -1, :].max(dim=0)
-    plot_data_min = all_plot_data[:, -1, :].max(dim=0)
 
-    # print the final test/train error
-    print(f"Train error: {plot_data_mean[-1, 0]:.4f} +- {plot_data_std[-1, 0]:.4f}, min/max: {plot_data_min[0]}/{plot_data_max[0]}")
-    print(f"Test error: {plot_data_mean[-1, 1]:.4f} +- {plot_data_std[-1, 1]:.4f}, min/max: {plot_data_min[1]}/{plot_data_max[1]}")
+    # Print the final test/train error
+    print(f"Train error: {plot_data_mean[-1, 0]:.4f} +- {plot_data_std[-1, 0]:.4f}")
+    print(f"Test error: {plot_data_mean[-1, 1]:.4f} +- {plot_data_std[-1, 1]:.4f}")
 
-    # training plot
+    # Training plot
     fig, ax = plt.subplots(1)
     ax.plot(plot_data_mean)
 
@@ -134,8 +177,10 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
         ax.plot(plot_data_mean - plot_data_std, '--', alpha=.5)
 
     ax.legend(PLOT_LEGEND)
-    ax.set_xlabel("epoch")
+    ax.set_xlabel("Epoch")
     ax.xaxis.get_major_locator().set_params(integer=True)
+    ax.set_ylabel("Error")
+
 
     fig.savefig(f"data/{name}/training.png")
     fig.show()
@@ -158,7 +203,7 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
 
         xmin, xmax, ymin, ymax = plt.axis()
         fig.savefig(f"data/{name}/distribution_points.png")
-        fig.show()
+        #fig.show()
 
         # heatmap
         image_input_x, image_input_y = torch.meshgrid(

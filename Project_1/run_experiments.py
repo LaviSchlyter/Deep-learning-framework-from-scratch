@@ -1,13 +1,16 @@
+"""
+Set up file to run the experiments in an efficient manner
+"""
+
 import os
 from dataclasses import dataclass
 from math import prod
 from typing import Callable, Optional
 
 import torch
+from core import train_model
 from matplotlib import pyplot
 from torch import optim, nn
-
-from core import train_model
 from util import load_data, DEVICE, InputNormalization, set_plot_font_size
 
 
@@ -16,7 +19,7 @@ class Experiment:
     name: str
     epochs: int
 
-    build_model: Callable[[], nn.Module]
+    build_model: Callable[[], nn.Module]  # TODO: what is this ?
 
     build_loss: Callable[[], nn.Module]
     weight_decay: float = 0
@@ -39,6 +42,15 @@ def run_experiment(
         data_size: int, rounds: int,
         plot_loss: bool, plot_titles: bool
 ):
+    """ Run an experiment
+
+    :param base_name: Name of session
+    :param experiment: Name of current experiment
+    :param data_size: Size of the data
+    :param rounds: Number of rounds to train TODO: confusing with epoch ?
+    :param plot_loss: Boolean on whether to plot the loss
+    :param plot_titles: Boolean on whether to plot the titles
+    """
     all_plot_data = None
     plot_legend = None
 
@@ -71,7 +83,7 @@ def run_experiment(
             all_plot_data = torch.empty((rounds,) + plot_data.shape)
         all_plot_data[round] = plot_data
 
-    # filter out loss data
+    # Filter out loss data TODO: what ?
     plot_mask = torch.tensor([plot_loss or not legend.endswith("_loss") for legend in plot_legend])
     all_plot_data = all_plot_data[:, :, plot_mask]
     plot_legend = [legend for i, legend in enumerate(plot_legend) if plot_mask[i]]
@@ -80,7 +92,7 @@ def run_experiment(
     plot_data_min, _ = torch.min(all_plot_data, dim=0)
     plot_data_max, _ = torch.max(all_plot_data, dim=0)
 
-    # actually start plotting
+    # Plots # TODO: Remove before submission
     fig, ax = pyplot.subplots(1)
     ax.plot(plot_data_mean)
 
@@ -102,6 +114,7 @@ def run_experiment(
     fig.savefig(f"output/{base_name}/{experiment.name}.png", bbox_inches='tight', pad_inches=0.1)
     fig.show()
 
+    # Saving performances onto file
     with open(f"output/{base_name}/{experiment.name}.txt", "w") as f:
         f.write(f"Trained for {experiment.epochs} epochs\n")
 
@@ -117,6 +130,14 @@ def run_experiments(
         plot_titles: bool,
         experiments: [Experiment]
 ):
+    """
+    Logging information about the experiment onto the console
+    :param base_name: Name of running session TODO:
+    :param rounds: Number of rounds the experiments should run
+    :param plot_titles: Boolean for plotting titles
+    :param experiments: List of experiments to run
+    """
+
     set_plot_font_size()
 
     print(f"Running experiments '{base_name}'")

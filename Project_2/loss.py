@@ -1,8 +1,5 @@
 import torch
-
 from core import HyperCube, ones_like
-from modules import Module
-
 
 class LossMSE:
     def __call__(self, input_, target):
@@ -35,7 +32,6 @@ class LossMSEGradFn:
         :param output_grad: The gradient w.r.t the output of the layer
         """
         batch_size = len(self.input_.value)
-
         input_grad = (self.input_.value - self.target.value) * output_grad/batch_size
         self.input_.backward(input_grad)
 
@@ -78,6 +74,9 @@ class LossBCEGradFn:
         self.target = target
 
     def backward(self, output_grad):
+        """ Computing the gradient
+        :param output_grad: Gradient of the loss w.r.t the output of operation
+        """
         x = self.input_.value
         y = self.target.value
         eps = ones_like(x) * 1e-12
