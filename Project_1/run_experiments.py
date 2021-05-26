@@ -8,7 +8,7 @@ from matplotlib import pyplot
 from torch import optim, nn
 
 from core import train_model
-from util import load_data, DEVICE, InputNormalization
+from util import load_data, DEVICE, InputNormalization, set_plot_font_size
 
 
 @dataclass
@@ -33,8 +33,12 @@ class Experiment:
         return self.build_model(), self.build_loss(), None if self.build_aux_loss is None else self.build_aux_loss()
 
 
-def run_experiment(base_name: str, experiment: Experiment, data_size: int, rounds: int, plot_loss: bool,
-                   plot_titles: bool):
+def run_experiment(
+        base_name: str,
+        experiment: Experiment,
+        data_size: int, rounds: int,
+        plot_loss: bool, plot_titles: bool
+):
     all_plot_data = None
     plot_legend = None
 
@@ -95,7 +99,7 @@ def run_experiment(base_name: str, experiment: Experiment, data_size: int, round
     ax.xaxis.get_major_locator().set_params(integer=True)
     ax.set_ylim(0, 1)
 
-    fig.savefig(f"output/{base_name}/{experiment.name}.png")
+    fig.savefig(f"output/{base_name}/{experiment.name}.png", bbox_inches='tight', pad_inches=0.1)
     fig.show()
 
     with open(f"output/{base_name}/{experiment.name}.txt", "w") as f:
@@ -105,7 +109,14 @@ def run_experiment(base_name: str, experiment: Experiment, data_size: int, round
                     f" (min={plot_data_min[-1, i]:.3f}, max={plot_data_max[-1, i]:.3f})\n")
 
 
-def run_experiments(base_name: str, rounds: int, plot_titles: bool, experiments: [Experiment]):
+def run_experiments(
+        base_name: str,
+        rounds: int,
+        plot_titles: bool,
+        experiments: [Experiment]
+):
+    set_plot_font_size()
+
     print(f"Running experiments '{base_name}'")
     os.makedirs(f"output/{base_name}", exist_ok=True)
 

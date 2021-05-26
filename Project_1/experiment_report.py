@@ -107,14 +107,22 @@ EXPERIMENT_CONV_BN = Experiment(
 EXPERIMENT_CONV_DROP = Experiment(
     name="Conv + Dropout",
     epochs=400,
-    build_model=lambda: build_conv_model(2, 1, False, 0.0, 0.5),
+    build_model=lambda: build_conv_model(2, 1, False, 0.1, 0.5),
     build_loss=nn.BCELoss,
 )
 EXPERIMENT_CONV_DROP_BN = Experiment(
     name="Conv + BatchNorm + Dropout",
     epochs=160,
-    build_model=lambda: build_conv_model(2, 1, True, 0.0, 0.5),
+    build_model=lambda: build_conv_model(2, 1, True, 0.1, 0.5),
     build_loss=nn.BCELoss,
+)
+
+EXPERIMENT_CONV_FLIP = Experiment(
+    name="Conv + Flipped",
+    epochs=80,
+    build_model=lambda: build_conv_model(2, 1, False, 0.0, 0.0),
+    build_loss=nn.BCELoss,
+    expand_flip=True,
 )
 
 EXPERIMENT_CONV_DUPLICATED = Experiment(
@@ -322,10 +330,12 @@ REPORT_EXPERIMENTS = [
     # EXPERIMENT_BCE_REG,
     # EXPERIMENT_BCE_SMALLER,
 
-    # EXPERIMENT_CONV,
-    # EXPERIMENT_CONV_BN,
-    # EXPERIMENT_CONV_DROP,
-    # EXPERIMENT_CONV_DROP_BN,
+    EXPERIMENT_CONV,
+    EXPERIMENT_CONV_FLIP,
+
+    EXPERIMENT_CONV_BN,
+    EXPERIMENT_CONV_DROP,
+    EXPERIMENT_CONV_DROP_BN,
 
     # EXPERIMENT_CONV_DUPLICATED,
     # EXPERIMENT_CONV_SHARED,
@@ -336,9 +346,9 @@ REPORT_EXPERIMENTS = [
     # EXPERIMENT_CONV_SHARED_AUX_MORE,
     # EXPERIMENT_CONV_SHARED_AUX_MORE_MORE,
 
-    EXPERIMENT_RESNET,
-    EXPERIMENT_RESNET_RESLESS,
-    EXPERIMENT_RESNET_RESLESS_PROB,
+    # EXPERIMENT_RESNET,
+    # EXPERIMENT_RESNET_RESLESS,
+    # EXPERIMENT_RESNET_RESLESS_PROB,
 ]
 
 

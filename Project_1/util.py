@@ -108,3 +108,18 @@ def load_data(data_size: int, input_normalization: InputNormalization = InputNor
         test_x=test_x, test_y=test_y, test_y_float=test_y.float(), test_digit=test_digit, test_size=data_size,
     )
     return data
+
+
+def set_plot_font_size():
+    """Set larger font sizes for pyplot."""
+
+    params = {
+        "legend.fontsize": "large",
+        "axes.labelsize": "large",
+        "axes.titlesize": "large",
+        "xtick.labelsize": "large",
+        "ytick.labelsize": "large"
+    }
+
+    from matplotlib import pyplot
+    pyplot.rcParams.update(params)
