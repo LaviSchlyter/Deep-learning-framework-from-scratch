@@ -103,6 +103,8 @@ def run_experiment(
     fig.show()
 
     with open(f"output/{base_name}/{experiment.name}.txt", "w") as f:
+        f.write(f"Trained for {experiment.epochs} epochs\n")
+
         f.write("Final performance:\n")
         for i in range(len(plot_legend)):
             f.write(f"{plot_legend[i]} = {plot_data_mean[-1, i]:.3f} +- {plot_data_dev[-1, i]:.3f}"
