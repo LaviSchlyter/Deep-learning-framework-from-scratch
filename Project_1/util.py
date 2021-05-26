@@ -1,10 +1,8 @@
 import sys
 from dataclasses import dataclass, fields
 from enum import Enum, auto
-
 import torch
 from torchvision.transforms import RandomAffine, InterpolationMode
-
 from dlc_practical_prologue import generate_pair_sets
 
 
@@ -45,6 +43,8 @@ class Data:
                 setattr(self, field.name, value.to(device))
 
     def expand_train_flip(self):
+        """ Expanding the data by flipping them
+        """
         same_digit = self.train_digit[:, 0] == self.train_digit[:, 1]
 
         self.train_x = torch.cat([self.train_x, self.train_x.flip(1)])
@@ -53,6 +53,11 @@ class Data:
         self.train_digit = torch.cat([self.train_digit, self.train_digit.flip(1)])
 
     def expand_train_transform(self, factor: int):
+        """ Expanding data with rotation and shearing
+
+        :param factor: How much larger the train size should be
+        :return: A training set with expanded data using rotation and shearing
+        """
         assert factor >= 1
         transform = RandomAffine(degrees=10, shear=20, interpolation=InterpolationMode.BILINEAR)
 
@@ -63,9 +68,14 @@ class Data:
 
         self.train_y = self.train_y.repeat(factor)
         self.train_y_float = self.train_y_float.repeat(factor)
+        # TODO: The 1 is not necessary right in the repeating
         self.train_digit = self.train_digit.repeat(factor, 1)
 
     def shuffle_train(self):
+        """ Shuffling the training data
+            TODO: Why is this done
+        :return: Shuffled training data
+        """
         perm = torch.randperm(len(self.train_x))
         self.train_x = self.train_x[perm]
         self.train_y = self.train_y[perm]
@@ -74,11 +84,11 @@ class Data:
 
 
 class InputNormalization(Enum):
-    # don't do any normalization
+    # No normalization
     No = auto()
-    # normalize each element of the input data separately
+    # Normalize each element of the input data separately TODO: What ?
     ElementWise = auto()
-    # normalize all elements of the input data together
+    # Normalize all elements of the input data together
     Total = auto()
 
 
