@@ -16,9 +16,11 @@ from hyper.optimizer import SGD, Adam
 from util import run_experiment, set_plot_font_size
 
 ROUNDS = 1
+EPOCHS = 250
 DATA_SIZE = 1000
 LOG_EPOCHS = True
 EXTRA_PLOTS = True
+MAKE_MOVIE = False
 
 
 def main_WS_MSE_SGD():
@@ -30,9 +32,10 @@ def main_WS_MSE_SGD():
         build_model=build_shared_model,
         build_optimizer=lambda param: SGD(param, lr=0.3, lambda_=0),
         loss_func=LossMSE(),
-        epochs=250,
+        epochs=EPOCHS,
         log_epochs=LOG_EPOCHS,
         extra_plots=EXTRA_PLOTS,
+        make_movie=MAKE_MOVIE,
     )
 
 
@@ -45,9 +48,10 @@ def main_MSE_SGD():
         build_model=build_simple_model,
         build_optimizer=lambda param: SGD(param, lr=0.3, lambda_=1e-4),
         loss_func=LossMSE(),
-        epochs=250,
+        epochs=EPOCHS,
         log_epochs=LOG_EPOCHS,
         extra_plots=EXTRA_PLOTS,
+        make_movie=MAKE_MOVIE,
     )
 
 
@@ -60,9 +64,10 @@ def main_BCE_SGD():
         build_model=build_simple_model,
         build_optimizer=lambda param: SGD(param, lr=0.3, lambda_=0),
         loss_func=LossBCE(),
-        epochs=250,
+        epochs=EPOCHS,
         log_epochs=LOG_EPOCHS,
         extra_plots=EXTRA_PLOTS,
+        make_movie=MAKE_MOVIE,
     )
 
 
@@ -75,9 +80,10 @@ def main_MSE_Adam():
         build_model=build_simple_model,
         build_optimizer=lambda param: Adam(param),
         loss_func=LossMSE(),
-        epochs=250,
+        epochs=EPOCHS,
         log_epochs=LOG_EPOCHS,
         extra_plots=EXTRA_PLOTS,
+        make_movie=MAKE_MOVIE,
     )
 
 
@@ -90,9 +96,11 @@ def main_BCE_Adam():
         build_model=build_simple_model,
         build_optimizer=lambda param: Adam(param),
         loss_func=LossBCE(),
-        epochs=250,
+        epochs=EPOCHS,
         log_epochs=LOG_EPOCHS,
         extra_plots=EXTRA_PLOTS,
+        make_movie=MAKE_MOVIE,
+
     )
 
 
@@ -105,9 +113,10 @@ def main_WS_MSE_Adam():
         build_model=build_shared_model,
         build_optimizer=lambda param: Adam(param),
         loss_func=LossMSE(),
-        epochs=250,
+        epochs=EPOCHS,
         log_epochs=LOG_EPOCHS,
         extra_plots=EXTRA_PLOTS,
+        make_movie=MAKE_MOVIE,
     )
 
 
@@ -115,9 +124,9 @@ if __name__ == '__main__':
     torch.set_grad_enabled(False)
     set_plot_font_size()
 
-    main_MSE_SGD()
-    main_BCE_SGD()
+    # main_MSE_SGD()
+    # main_BCE_SGD()
     main_MSE_Adam()
-    main_BCE_Adam()
-    main_WS_MSE_SGD()
+    # main_BCE_Adam()
+    # main_WS_MSE_SGD()
     main_WS_MSE_Adam()

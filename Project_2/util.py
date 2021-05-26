@@ -1,8 +1,10 @@
 import math
 import os
 
+import matplotlib
 import matplotlib.pyplot as plt
 import torch
+import torchvision.io
 
 from hyper.core import HyperCube
 
@@ -76,16 +78,44 @@ class Data:
         return Data(train_x=train_input, train_y=train_target, test_x=test_input, test_y=test_target)
 
 
+HEATMAP_SIZE = 1000
+
+
+def calculate_heatmap(model, ):
+    bound = math.sqrt(3)
+    image_input_x, image_input_y = torch.meshgrid(
+        torch.linspace(-bound, bound, HEATMAP_SIZE),
+        torch.linspace(-bound, bound, HEATMAP_SIZE)
+    )
+    image_input = torch.cat([image_input_x.reshape(-1, 1), image_input_y.reshape(-1, 1)], dim=1)
+    image_output = model(HyperCube(image_input))
+
+    return image_output.value.reshape(-1, HEATMAP_SIZE).rot90(k=1)
+
+
+def to_movie_frame(heatmap):
+    heatmap = heatmap[:, :, None]
+
+    blue = torch.tensor([0.0, 0.0, 1.0]).view(1, 1, 3)
+    yellow = torch.tensor([1.0, 1.0, 0.0]).view(1, 1, 3)
+    red = torch.tensor([1.0, 0.0, 0.0]).view(1, 1, 3)
+
+    result = (heatmap <= 0.5) * blue.lerp(yellow, (2 * heatmap)) + \
+             (heatmap > 0.5) * yellow.lerp(red, (2 * heatmap) - 1)
+    return (result * 255).type(torch.uint8)
+
+
 PLOT_LEGEND = ["Train_error", "Test_error", "Train_loss", "Test_loss"]
 
 
-def train_model(model, optimizer, loss_func, data, epoch, log_epochs):
+def train_model(model, optimizer, loss_func, data, epoch, log_epochs: bool, make_movie: bool):
     """
     Train a model given an optimizer, loss function, train and test data, and the number of epochs.
     log_epochs determines whether intermediate train and test losses are printed.
     """
 
     plot_data = torch.empty(epoch, len(PLOT_LEGEND))
+    movie_data = torch.empty(epoch, HEATMAP_SIZE, HEATMAP_SIZE, 3, dtype=torch.uint8) if make_movie else None
 
     for e in range(epoch):
         optimizer.zero_grad()
@@ -116,7 +146,10 @@ def train_model(model, optimizer, loss_func, data, epoch, log_epochs):
                 f"Test_error={error_test:.4f}"
             )
 
-    return plot_data
+        if make_movie:
+            movie_data[e, :, :] = to_movie_frame(calculate_heatmap(model))
+
+    return plot_data, movie_data
 
 
 def evaluate_model(pred_y, true_y, loss_func):
@@ -135,7 +168,7 @@ def evaluate_model(pred_y, true_y, loss_func):
 def run_experiment(
         name: str, rounds: int, n: int,
         build_model, build_optimizer, loss_func, epochs, log_epochs: bool,
-        extra_plots: bool
+        extra_plots: bool, make_movie: bool
 ):
     """
     Build, train and evaluate a model for the given number of rounds.
@@ -149,6 +182,7 @@ def run_experiment(
     :param epochs: Number of epochs:int
     :param log_epochs: Whether to print the losses or not : Bool
     :param extra_plots: Whether to print final plots or not : Bool
+    :param make_movie: Whether to save a movie of the heatmap during training.
     """
     print(f"Running experiment {name}")
 
@@ -164,8 +198,15 @@ def run_experiment(
         model = build_model()
         optimizer = build_optimizer(model.param())
 
-        plot_data = train_model(model, optimizer, loss_func, data, epochs, log_epochs)
+        plot_data, movie_data = train_model(
+            model, optimizer, loss_func,
+            data, epochs,
+            log_epochs, make_movie and round == rounds - 1
+        )
         all_plot_data[round, :, :] = plot_data
+
+        if make_movie:
+            torchvision.io.write_video(f"data/{name}/movie.mp4", video_array=movie_data, fps=epochs / 10)
 
     plot_experiment(name, model, data, all_plot_data, extra_plots)
 
@@ -214,24 +255,21 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
         plt.scatter(data.train_x.value[y_train_bool_pred, 0], data.train_x.value[y_train_bool_pred, 1], color="red")
         plt.scatter(data.train_x.value[~y_train_bool_pred, 0], data.train_x.value[~y_train_bool_pred, 1], color="blue")
 
-        xmin, xmax, ymin, ymax = plt.axis()
         fig.savefig(f"data/{name}/distribution_points.png")
         fig.show()
 
         # Heatmap
-        image_input_x, image_input_y = torch.meshgrid(
-            torch.linspace(xmin, xmax, 1000),
-            torch.linspace(ymin, ymax, 1000)
-        )
-        image_input = torch.cat([image_input_x.reshape(-1, 1), image_input_y.reshape(-1, 1)], dim=1)
-        image_output = model(HyperCube(image_input))
-        import matplotlib
+        heatmap = calculate_heatmap(model)
+
         cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", [(0, "blue"), (0.5, "yellow"), (1, "red")])
         fig = plt.figure(figsize=(7, 7))
+        bound = math.sqrt(3)
+        plt.imshow(heatmap, cmap=cmap, extent=(-bound, bound, -bound, bound))
 
-        plt.imshow(image_output.value.reshape(-1, 1000).rot90(k=1), cmap=cmap, extent=(xmin, xmax, ymin, ymax))
         circle1 = plt.Circle((0, 0), math.sqrt(6) / math.sqrt(math.pi), color='black', fill=False)
         plt.gca().add_patch(circle1)
+
         plt.scatter(coordinate_false[:, 0], coordinate_false[:, 1], 40, color="black", marker="x")
+
         fig.savefig(f"data/{name}/density_correct.png")
         plt.show()
