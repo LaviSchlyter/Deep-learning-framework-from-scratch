@@ -1,26 +1,22 @@
 import math
 import os
+
 import matplotlib.pyplot as plt
 import torch
-from core import HyperCube
 
-# TODO Figure out what to do with the plotting part
+from hyper.core import HyperCube
+
 
 def set_plot_font_size():
     """Set larger font sizes for pyplot."""
-    params = { "legend.fontsize": "large", "axes.labelsize": "large", "axes.titlesize": "large", "xtick.labelsize": "large",
-               "ytick.labelsize": "large" }
+    params = {
+        "legend.fontsize": "large",
+        "axes.labelsize": "large",
+        "axes.titlesize": "large",
+        "xtick.labelsize": "large",
+        "ytick.labelsize": "large"
+    }
     plt.rcParams.update(params)
-
-def generate_disc_set(nb):
-    """ Generate a disk of radius 1/sqrt(2*pi)
-
-    :param nb: Number of points wanted
-    :return: HyperCube with the x coordinates and with the y targets
-    """
-    input_ = torch.empty(nb, 2).uniform_()
-    target = ((input_ - 0.5).pow(2).sum(1) < 1 / (2 * math.pi)).float()
-    return HyperCube(input_), HyperCube(target[:, None])
 
 
 def evaluate_error(pred, target):
@@ -31,6 +27,17 @@ def evaluate_error(pred, target):
     :return: The error rate between target and predicted
     """
     return 1 - ((pred.value > 0.5) == (target.value > 0.5)).sum() / len(pred.value)
+
+
+def generate_disc_set(nb):
+    """ Generate a disk of radius 1/sqrt(2*pi)
+
+    :param nb: Number of points wanted
+    :return: HyperCube with the x coordinates and with the y targets
+    """
+    input_ = torch.empty(nb, 2).uniform_()
+    target = ((input_ - 0.5).pow(2).sum(1) < 1 / (2 * math.pi)).float()
+    return HyperCube(input_), HyperCube(target[:, None])
 
 
 def normalize(train_x, test_x):
@@ -48,6 +55,8 @@ def normalize(train_x, test_x):
 
 
 class Data:
+    """ Utility class to hold test and training data `HyperCubes`. """
+
     def __init__(self, train_x, train_y, test_x, test_y):
         self.test_y = test_y
         self.test_x = test_x
@@ -57,7 +66,7 @@ class Data:
     @classmethod
     def generate(cls, n: int):
         """
-
+        Generate a new train and test dataset with the given size.
         :param n: Number of data to generate
         :return: a Data struct containing the train, test inputs and targets
         """
@@ -71,11 +80,14 @@ PLOT_LEGEND = ["Train_error", "Test_error", "Train_loss", "Test_loss"]
 
 
 def train_model(model, optimizer, loss_func, data, epoch, log_epochs):
+    """
+    Train a model given an optimizer, loss function, train and test data, and the number of epochs.
+    log_epochs determines whether intermediate train and test losses are printed.
+    """
 
     plot_data = torch.empty(epoch, len(PLOT_LEGEND))
 
     for e in range(epoch):
-
         optimizer.zero_grad()
 
         y_train = model(data.train_x)
@@ -126,6 +138,7 @@ def run_experiment(
         extra_plots: bool
 ):
     """
+    Build, train and evaluate a model for the given number of rounds.
 
     :param name: Name of the experiment :str
     :param rounds: Number of rounds : int
@@ -158,6 +171,8 @@ def run_experiment(
 
 
 def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
+    """ Plot a bunch of different visualization of the given mode and training data. """
+
     os.makedirs(f"data/{name}", exist_ok=True)
 
     plot_data_std, plot_data_mean = torch.std_mean(all_plot_data, dim=0)
@@ -181,12 +196,11 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
     ax.xaxis.get_major_locator().set_params(integer=True)
     ax.set_ylabel("Error")
 
-
     fig.savefig(f"data/{name}/training.png")
     fig.show()
 
     if extra_plots:
-        # scatter plot
+        # Scatter plot
         fig = plt.figure(figsize=(7, 7))
 
         y_train_pred = model(data.train_x)
@@ -200,12 +214,11 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
         plt.scatter(data.train_x.value[y_train_bool_pred, 0], data.train_x.value[y_train_bool_pred, 1], color="red")
         plt.scatter(data.train_x.value[~y_train_bool_pred, 0], data.train_x.value[~y_train_bool_pred, 1], color="blue")
 
-
         xmin, xmax, ymin, ymax = plt.axis()
         fig.savefig(f"data/{name}/distribution_points.png")
-        #fig.show()
+        fig.show()
 
-        # heatmap
+        # Heatmap
         image_input_x, image_input_y = torch.meshgrid(
             torch.linspace(xmin, xmax, 1000),
             torch.linspace(ymin, ymax, 1000)
@@ -213,12 +226,11 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
         image_input = torch.cat([image_input_x.reshape(-1, 1), image_input_y.reshape(-1, 1)], dim=1)
         image_output = model(HyperCube(image_input))
         import matplotlib
-        cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", [(0,"blue"), (0.5,"yellow"), (1,"red")])
+        cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", [(0, "blue"), (0.5, "yellow"), (1, "red")])
         fig = plt.figure(figsize=(7, 7))
 
-
-        plt.imshow(image_output.value.reshape(-1, 1000).rot90(k=1), cmap=cmap, extent= (xmin, xmax,ymin, ymax))
-        circle1 = plt.Circle((0, 0), math.sqrt(6)/math.sqrt(math.pi), color='black', fill=False)
+        plt.imshow(image_output.value.reshape(-1, 1000).rot90(k=1), cmap=cmap, extent=(xmin, xmax, ymin, ymax))
+        circle1 = plt.Circle((0, 0), math.sqrt(6) / math.sqrt(math.pi), color='black', fill=False)
         plt.gca().add_patch(circle1)
         plt.scatter(coordinate_false[:, 0], coordinate_false[:, 1], 40, color="black", marker="x")
         fig.savefig(f"data/{name}/density_correct.png")

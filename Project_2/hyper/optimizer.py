@@ -1,20 +1,24 @@
 from abc import ABC, abstractmethod
 
+
 class Optimizer(ABC):
+    """ Base class for all optimizer implementations. """
 
     def __init__(self, params):
+        """ Crate a new optimizer that will optimize the given parameters. """
         self.params = params
 
     def zero_grad(self):
-        """ Sets the parameters gradient to zero
-
-        This operation is necessary because the gradients accumulate
-        """
+        """ Clear the accumulated gradient for all parameters. """
         for param in self.params:
             param.zero_grad()
 
     @abstractmethod
     def step(self):
+        """
+        Perform a single optimization iteration,
+        updating the parameter values using their accumulated gradients.
+        """
         pass
 
 
@@ -28,17 +32,17 @@ class Adam(Optimizer):
         :param epsilon: Small value to prevent division by zero
         """
         super().__init__(params)
-        self.epsilon = epsilon
-        self.beta2 = beta2
-        self.beta1 = beta1
         self.alpha = alpha
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+
+        # initialize iteration counter and moment estimates
         self.t = 0
         self.m = [0] * len(self.params)
         self.v = [0] * len(self.params)
 
     def step(self):
-        """ Update the weights
-        """
         self.t += 1
         for i, param in enumerate(self.params):
             self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * param.grad
@@ -50,16 +54,15 @@ class Adam(Optimizer):
 
 
 class SGD(Optimizer):
-
     def __init__(self, params, lr, lambda_=0):
         """
         :param params: Parameters of the model which are to be optimized
         :param lr: The learning rate
-        :param lambda_: The weight decay used to penalize large weights
+        :param lambda_: The L2 regularization weight used to penalize large weights.
         """
         super().__init__(params)
-        self.lambda_ = lambda_
         self.lr = lr
+        self.lambda_ = lambda_
 
     def step(self):
         for param in self.params:
