@@ -1,3 +1,8 @@
+""" Experiments reported in the project
+
+The following framework is used in order to produce the networks described in the report
+"""
+
 from torch import nn
 
 from models import PreprocessModel, WeightShareModel
@@ -17,7 +22,7 @@ def build_simple_dense_model(dropout=0.0):
         nn.Sigmoid(),
     )
 
-
+# Same model as above with twice less nodes
 def build_simple_dense_model_smaller(dropout=0.0):
     return nn.Sequential(
         nn.Flatten(),
@@ -49,6 +54,7 @@ EXPERIMENT_BCE = Experiment(
 )
 
 EXPERIMENT_BCE_SMALLER = Experiment(
+    # TODO Probably add smaller in the name ?
     name="Dense BCE",
     epochs=20,
     batch_size=100,
@@ -67,6 +73,13 @@ EXPERIMENT_BCE_REG = Experiment(
 
 
 def build_conv_model(batch_norm: bool, conv_dropout: float, linear_dropout: float):
+    """ Building a convolutional model
+
+    :param batch_norm: Whether to include bath normalization or not
+    :param conv_dropout: Ratio of feature detectors  to drop in the convolutional layers
+    :param linear_dropout: Ratio of feature detectors  to drop in the linear layers
+    :return: Sequential containing the layers passed
+    """
     return nn.Sequential(
         nn.Conv2d(2, 16, (3, 3)),
         nn.Dropout(conv_dropout),
@@ -131,7 +144,7 @@ def build_digit_conv_network():
         nn.Softmax(),
     )
 
-
+# TODO: what do you mean by duplicated
 EXPERIMENT_CONV_AUX_DUPLICATED = Experiment(
     name="Conv + Aux, duplicated",
     epochs=40,
@@ -181,9 +194,7 @@ REPORT_EXPERIMENTS = [
     # EXPERIMENT_BCE,
     # EXPERIMENT_BCE_REG,
     # EXPERIMENT_BCE_SMALLER,
-
     *EXPERIMENTS_CONV,
-
     # EXPERIMENT_CONV_AUX_DUPLICATED,
     # EXPERIMENT_CONV_AUX_SHARED,
 
