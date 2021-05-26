@@ -1,9 +1,7 @@
 import math
 from typing import Optional
-
 import torch
 from torch import nn, optim
-
 from util import Data
 
 
@@ -12,6 +10,18 @@ def evaluate_model(
         x, y, y_float, y_digit,
         loss_func, aux_weight, aux_loss_func
 ):
+    """ Compute the losses, the digit and final accuracy
+
+    :param model: Model used
+    :param x: Tensor input into the network
+    :param y: Prediction from the network
+    :param y_float: Target value
+    :param y_digit: Target digit value
+    :param loss_func: Loss function used
+    :param aux_weight: Importance weight on auxiliary loss
+    :param aux_loss_func: Auxiliary loss function
+    :return: Loss, digit and final accuracies
+    """
     batch_size = len(x)
 
     output = model(x)
@@ -62,6 +72,19 @@ def train_model(
         loss_func: nn.Module, aux_loss_func: Optional[nn.Module], aux_weight: float,
         data: Data, epochs: int, batch_size: int,
 ):
+    """ Training the model
+    The model is trained and evaluated at each epoch
+
+    :param model: Module model
+    :param optimizer: Method to optimize the parameters
+    :param loss_func: Loss function
+    :param aux_loss_func: Auxiliary loss function
+    :param aux_weight: Auxiliary weight
+    :param data: Data structures containing the data
+    :param epochs: Number of epochs for training
+    :param batch_size: Number of samples processed before updating the model
+    :return: Tensor containing the evaluation at each epoch + legends for plotting
+    """
     if batch_size == -1:
         batch_size = len(data.train_x)
     batch_count = len(data.train_x) // batch_size
