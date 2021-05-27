@@ -9,11 +9,11 @@ from math import prod
 from typing import Callable, Optional
 
 import torch
-from matplotlib import pyplot
+# from matplotlib import pyplot
 from torch import optim, nn
 
 from core import train_model
-from util import load_data, DEVICE, InputNormalization, set_plot_font_size
+from util import load_data, DEVICE, InputNormalization  # , set_plot_font_size
 
 
 @dataclass
@@ -95,7 +95,7 @@ def run_experiment(
             all_plot_data = torch.empty((rounds,) + plot_data.shape)
         all_plot_data[round] = plot_data
 
-    # Filter out loss data TODO: what ?
+    # Filter out loss data
     plot_mask = torch.tensor([plot_loss or not legend.endswith("_loss") for legend in plot_legend])
     all_plot_data = all_plot_data[:, :, plot_mask]
     plot_legend = [legend for i, legend in enumerate(plot_legend) if plot_mask[i]]
@@ -105,26 +105,26 @@ def run_experiment(
     plot_data_max, _ = torch.max(all_plot_data, dim=0)
 
     # Plots # TODO: Remove before submission
-    fig, ax = pyplot.subplots(1)
-    ax.plot(plot_data_mean)
+    # fig, ax = pyplot.subplots(1)
+    # ax.plot(plot_data_mean)
 
-    if rounds > 1:
-        ax.set_prop_cycle(None)
-        ax.plot(plot_data_mean + plot_data_dev, '--', alpha=.5)
-        ax.set_prop_cycle(None)
-        ax.plot(plot_data_mean - plot_data_dev, '--', alpha=.5)
+    # if rounds > 1:
+    #     ax.set_prop_cycle(None)
+    #     ax.plot(plot_data_mean + plot_data_dev, '--', alpha=.5)
+    #     ax.set_prop_cycle(None)
+    #     ax.plot(plot_data_mean - plot_data_dev, '--', alpha=.5)
 
-    if plot_titles:
-        pyplot.title(experiment.name)
-    ax.legend(plot_legend)
+    # if plot_titles:
+    #     pyplot.title(experiment.name)
+    # ax.legend(plot_legend)
 
-    ax.set_xlabel("epoch")
-    ax.set_ylabel("accuracy")
-    ax.xaxis.get_major_locator().set_params(integer=True)
-    ax.set_ylim(0, 1)
+    # ax.set_xlabel("epoch")
+    # ax.set_ylabel("accuracy")
+    # ax.xaxis.get_major_locator().set_params(integer=True)
+    # ax.set_ylim(0, 1)
 
-    fig.savefig(f"output/{base_name}/{experiment.name}.png", bbox_inches='tight', pad_inches=0.1)
-    fig.show()
+    # fig.savefig(f"output/{base_name}/{experiment.name}.png", bbox_inches='tight', pad_inches=0.1)
+    # fig.show()
 
     # Saving performances onto file
     with open(f"output/{base_name}/{experiment.name}.txt", "w") as f:
@@ -147,7 +147,7 @@ def run_experiments(
     training process and a text file with final accuracies and losses into `output/{base_name}/{experiment.name}/`.
     `plot_titles` and `plot_loss` control whether the plots get titles and loss curves.
     """
-    set_plot_font_size()
+    # set_plot_font_size()
 
     print(f"Running experiments '{base_name}'")
     os.makedirs(f"output/{base_name}", exist_ok=True)

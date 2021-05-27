@@ -3,7 +3,7 @@ from dataclasses import dataclass, fields
 from enum import Enum, auto
 
 import torch
-from torchvision.transforms import RandomAffine, InterpolationMode
+# from torchvision.transforms import RandomAffine, InterpolationMode
 
 from dlc_practical_prologue import generate_pair_sets
 
@@ -70,18 +70,19 @@ class Data:
         Expand train data with rotation and shearing in-place. `factor` is the factor by which to expand the train set,
          eg. `1` doesn't generate any new data and `2` doubles it.
         """
-        assert factor >= 1
-        transform = RandomAffine(degrees=10, shear=20, interpolation=InterpolationMode.BILINEAR)
+        assert factor == 1
 
-        self.train_size *= factor
+        # assert factor >= 1
+        # transform = RandomAffine(degrees=10, shear=20, interpolation=InterpolationMode.BILINEAR)
 
-        train_x_new = [transform(self.train_x) for _ in range(factor - 1)]
-        self.train_x = torch.cat([self.train_x] + train_x_new, dim=0)
+        # self.train_size *= factor
 
-        self.train_y = self.train_y.repeat(factor)
-        self.train_y_float = self.train_y_float.repeat(factor)
-        # TODO: The 1 is not necessary right in the repeating
-        self.train_digit = self.train_digit.repeat(factor, 1)
+        # train_x_new = [transform(self.train_x) for _ in range(factor - 1)]
+        # self.train_x = torch.cat([self.train_x] + train_x_new, dim=0)
+
+        # self.train_y = self.train_y.repeat(factor)
+        # self.train_y_float = self.train_y_float.repeat(factor)
+        # self.train_digit = self.train_digit.repeat(factor, 1)
 
     def shuffle_train(self):
         """

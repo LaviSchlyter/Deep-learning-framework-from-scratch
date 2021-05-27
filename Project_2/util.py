@@ -1,8 +1,8 @@
 import math
 import os
 
-import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib
+# import matplotlib.pyplot as plt
 import torch
 import torchvision.io
 
@@ -18,7 +18,7 @@ def set_plot_font_size():
         "xtick.labelsize": "large",
         "ytick.labelsize": "large"
     }
-    plt.rcParams.update(params)
+    # plt.rcParams.update(params)
 
 
 def evaluate_error(pred, target):
@@ -223,53 +223,53 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
     print(f"Test error: {plot_data_mean[-1, 1]:.4f} +- {plot_data_std[-1, 1]:.4f}")
 
     # Training plot
-    fig, ax = plt.subplots(1)
-    ax.plot(plot_data_mean)
+    # fig, ax = plt.subplots(1)
+    # ax.plot(plot_data_mean)
 
-    if len(all_plot_data) > 1:
-        ax.set_prop_cycle(None)
-        ax.plot(plot_data_mean + plot_data_std, '--', alpha=.5)
-        ax.set_prop_cycle(None)
-        ax.plot(plot_data_mean - plot_data_std, '--', alpha=.5)
+    # if len(all_plot_data) > 1:
+    #     ax.set_prop_cycle(None)
+    #     ax.plot(plot_data_mean + plot_data_std, '--', alpha=.5)
+    #     ax.set_prop_cycle(None)
+    #     ax.plot(plot_data_mean - plot_data_std, '--', alpha=.5)
 
-    ax.legend(PLOT_LEGEND)
-    ax.set_xlabel("Epoch")
-    ax.xaxis.get_major_locator().set_params(integer=True)
-    ax.set_ylabel("Error")
+    # ax.legend(PLOT_LEGEND)
+    # ax.set_xlabel("Epoch")
+    # ax.xaxis.get_major_locator().set_params(integer=True)
+    # ax.set_ylabel("Error")
 
-    fig.savefig(f"data/{name}/training.png")
-    fig.show()
+    # fig.savefig(f"data/{name}/training.png")
+    # fig.show()
 
-    if extra_plots:
+    # if extra_plots:
         # Scatter plot
-        fig = plt.figure(figsize=(7, 7))
+        # fig = plt.figure(figsize=(7, 7))
 
-        y_train_pred = model(data.train_x)
-        y_test_pred = model(data.test_x)
-        y_test_bool_pred = (y_test_pred.value > 0.5)
-        boolean_falsely_predicted = (y_test_bool_pred != data.test_y.value)
-        coordinate_false = data.test_x.value[boolean_falsely_predicted.squeeze(1)]
+        # y_train_pred = model(data.train_x)
+        # y_test_pred = model(data.test_x)
+        # y_test_bool_pred = (y_test_pred.value > 0.5)
+        # boolean_falsely_predicted = (y_test_bool_pred != data.test_y.value)
+        # coordinate_false = data.test_x.value[boolean_falsely_predicted.squeeze(1)]
 
 
-        y_train_bool_pred = (y_train_pred.value > 0.5).squeeze(1)
-        plt.scatter(data.train_x.value[y_train_bool_pred, 0], data.train_x.value[y_train_bool_pred, 1], color="red")
-        plt.scatter(data.train_x.value[~y_train_bool_pred, 0], data.train_x.value[~y_train_bool_pred, 1], color="blue")
+        # y_train_bool_pred = (y_train_pred.value > 0.5).squeeze(1)
+        # plt.scatter(data.train_x.value[y_train_bool_pred, 0], data.train_x.value[y_train_bool_pred, 1], color="red")
+        # plt.scatter(data.train_x.value[~y_train_bool_pred, 0], data.train_x.value[~y_train_bool_pred, 1], color="blue")
 
-        fig.savefig(f"data/{name}/distribution_points.png")
-        fig.show()
+        # fig.savefig(f"data/{name}/distribution_points.png")
+        # fig.show()
 
         # Heatmap
-        heatmap = calculate_heatmap(model)
+        # heatmap = calculate_heatmap(model)
 
-        cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", [(0, "blue"), (0.5, "yellow"), (1, "red")])
-        fig = plt.figure(figsize=(7, 7))
-        bound = math.sqrt(3)
-        plt.imshow(heatmap, cmap=cmap, extent=(-bound, bound, -bound, bound))
+        # cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", [(0, "blue"), (0.5, "yellow"), (1, "red")])
+        # fig = plt.figure(figsize=(7, 7))
+        # bound = math.sqrt(3)
+        # plt.imshow(heatmap, cmap=cmap, extent=(-bound, bound, -bound, bound))
 
-        circle1 = plt.Circle((0, 0), math.sqrt(6) / math.sqrt(math.pi), color='black', fill=False)
-        plt.gca().add_patch(circle1)
+        # circle1 = plt.Circle((0, 0), math.sqrt(6) / math.sqrt(math.pi), color='black', fill=False)
+        # plt.gca().add_patch(circle1)
 
-        plt.scatter(coordinate_false[:, 0], coordinate_false[:, 1], 40, color="black", marker="x")
+        # plt.scatter(coordinate_false[:, 0], coordinate_false[:, 1], 40, color="black", marker="x")
 
-        fig.savefig(f"data/{name}/density_correct.png")
-        plt.show()
+        # fig.savefig(f"data/{name}/density_correct.png")
+        # plt.show()
