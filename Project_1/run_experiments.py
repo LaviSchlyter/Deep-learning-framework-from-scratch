@@ -1,5 +1,6 @@
 """
-Set up file to run the experiments in an efficient manner
+The experiment runner infrastructure.
+This enables us to test different architectures with different settings for many rounds in an easily reproducible way.
 """
 
 import os
@@ -8,14 +9,22 @@ from math import prod
 from typing import Callable, Optional
 
 import torch
-from core import train_model
 from matplotlib import pyplot
 from torch import optim, nn
+
+from core import train_model
 from util import load_data, DEVICE, InputNormalization, set_plot_font_size
 
 
 @dataclass
 class Experiment:
+    """
+    The settings for an experiment. This includes the model, the loss function, training parameters,
+    data augmentation settings, ...
+    The model and loss functions are functions that need to be called to crate new instances, this is to ensure that
+    different rounds start with a newly initialized model.
+    """
+
     name: str
     epochs: int
 
@@ -33,6 +42,8 @@ class Experiment:
     batch_size: int = -1
 
     def build(self):
+        """Build a new model and loss function."""
+
         return self.build_model(), self.build_loss(), None if self.build_aux_loss is None else self.build_aux_loss()
 
 
@@ -42,12 +53,13 @@ def run_experiment(
         data_size: int, rounds: int,
         plot_loss: bool, plot_titles: bool
 ):
-    """ Run an experiment
+    """
+    Run a single `experiment` `rounds` times.
 
     :param base_name: Name of session
     :param experiment: Name of current experiment
     :param data_size: Size of the data
-    :param rounds: Number of rounds to train TODO: confusing with epoch ?
+    :param rounds: Number of rounds to run the experiment for.
     :param plot_loss: Boolean on whether to plot the loss
     :param plot_titles: Boolean on whether to plot the titles
     """
@@ -127,24 +139,20 @@ def run_experiment(
 def run_experiments(
         base_name: str,
         rounds: int,
-        plot_titles: bool,
+        plot_titles: bool, plot_loss: bool,
         experiments: [Experiment]
 ):
     """
-    Logging information about the experiment onto the console
-    :param base_name: Name of running session TODO:
-    :param rounds: Number of rounds the experiments should run
-    :param plot_titles: Boolean for plotting titles
-    :param experiments: List of experiments to run
+    The experiment runner entry point. Runs each `experiment` `rounds` times. Show and saves a plot of the
+    training process and a text file with final accuracies and losses into `output/{base_name}/{experiment.name}/`.
+    `plot_titles` and `plot_loss` control whether the plots get titles and loss curves.
     """
-
     set_plot_font_size()
 
     print(f"Running experiments '{base_name}'")
     os.makedirs(f"output/{base_name}", exist_ok=True)
 
     data_size: int = 1000
-    plot_loss: bool = True
 
     print(f"Running for {rounds} rounds with data_size {data_size}")
 

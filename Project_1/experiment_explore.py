@@ -1,7 +1,7 @@
 from torch import nn
 
-from models import dense_network, WeightShareModel, full_conv_network, shared_conv_network, ProbOutputLayer, \
-    shared_resnet, PreprocessModel
+from models import dense_network, WeightShareModel, basic_conv_network, shared_conv_network, ProbOutputLayer, \
+    build_resnet, PreprocessModel
 from run_experiments import run_experiments, Experiment
 from util import InputNormalization
 
@@ -128,7 +128,7 @@ EXPERIMENT_CONV = Experiment(
     name="Conv",
     epochs=1000,
 
-    build_model=lambda: full_conv_network(),
+    build_model=lambda: basic_conv_network(),
 
     build_loss=lambda: nn.BCELoss(),
 )
@@ -308,7 +308,7 @@ EXPERIMENT_RESNET = Experiment(
     batch_size=100,
 
     build_model=lambda: WeightShareModel(
-        shared_resnet(output_size=10, res=True),
+        build_resnet(output_size=10, res=True),
         output_head=nn.Sequential(
             nn.Flatten(),
             nn.Linear(20, 20),
@@ -329,7 +329,7 @@ EXPERIMENT_RESNET_RESLESS = Experiment(
     batch_size=100,
 
     build_model=lambda: WeightShareModel(
-        shared_resnet(output_size=10, res=False),
+        build_resnet(output_size=10, res=False),
         output_head=nn.Sequential(
             nn.Flatten(),
             nn.Linear(20, 20),
@@ -350,7 +350,7 @@ EXPERIMENT_RESNET_RESLESS_PROB = Experiment(
     batch_size=100,
 
     build_model=lambda: WeightShareModel(
-        shared_resnet(output_size=10, res=False),
+        build_resnet(output_size=10, res=False),
         output_head=ProbOutputLayer(),
     ),
 
@@ -365,7 +365,7 @@ EXPERIMENT_RESNET_RESLESS_MSE = Experiment(
     batch_size=100,
 
     build_model=lambda: WeightShareModel(
-        shared_resnet(output_size=10, res=False),
+        build_resnet(output_size=10, res=False),
         output_head=nn.Sequential(
             nn.Flatten(),
             nn.Linear(20, 20),
@@ -386,8 +386,8 @@ EXPERIMENT_RESNET_RESLESS_DUP = Experiment(
     batch_size=100,
 
     build_model=lambda: PreprocessModel(
-        shared_resnet(output_size=10, res=False),
-        shared_resnet(output_size=10, res=False),
+        build_resnet(output_size=10, res=False),
+        build_resnet(output_size=10, res=False),
         output_head=nn.Sequential(
             nn.Flatten(),
             nn.Linear(20, 20),
@@ -432,4 +432,4 @@ EXPERIMENTS_EXPLORE = [
 ]
 
 if __name__ == '__main__':
-    run_experiments("explore", rounds=1, plot_titles=True, experiments=EXPERIMENTS_EXPLORE)
+    run_experiments("explore", rounds=1, plot_titles=True, plot_loss=True, experiments=EXPERIMENTS_EXPLORE)

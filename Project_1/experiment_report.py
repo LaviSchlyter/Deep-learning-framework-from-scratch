@@ -1,14 +1,11 @@
-""" Experiments reported in the project
-
-The following framework is used in order to produce the networks described in the report
-"""
-
-from models import PreprocessModel, WeightShareModel, shared_resnet, ProbOutputLayer
-from run_experiments import run_experiments, Experiment
 from torch import nn
+
+from models import PreprocessModel, WeightShareModel, build_resnet, ProbOutputLayer
+from run_experiments import run_experiments, Experiment
 
 
 def build_simple_dense_model(dropout=0.0):
+    """Build a simple dense neural network, optionally with dropout layers with probability `dropout`."""
     return nn.Sequential(
         nn.Flatten(),
         nn.Linear(2 * 14 * 14, 64),
@@ -22,8 +19,8 @@ def build_simple_dense_model(dropout=0.0):
     )
 
 
-# Same model as above with twice less nodes
 def build_simple_dense_model_smaller(dropout=0.0):
+    """Build the same model as `build_simple_dense_model` but with smaller hidden layers"""
     return nn.Sequential(
         nn.Flatten(),
         nn.Linear(2 * 14 * 14, 32),
@@ -54,8 +51,7 @@ EXPERIMENT_BCE = Experiment(
 )
 
 EXPERIMENT_BCE_SMALLER = Experiment(
-    # TODO Probably add smaller in the name ?
-    name="Dense BCE",
+    name="Dense BCE smaller",
     epochs=20,
     batch_size=100,
     build_model=build_simple_dense_model_smaller,
@@ -77,18 +73,17 @@ def build_conv_model(
         batch_norm: bool,
         conv_dropout: float, linear_dropout: float
 ):
-    """ Building a convolutional model
-
-    :param batch_norm: Whether to include bath normalization or not
-    :param conv_dropout: Ratio of feature detectors  to drop in the convolutional layers
-    :param linear_dropout: Ratio of feature detectors  to drop in the linear layers
-    :return: Sequential containing the layers passed
+    """
+    Build a convolutional model with a given number of input channels and a given output size.
+    If the output size is 1, the final activation is Sigmoid, otherwise it's Softmax.
+    Optionally include batch normalization after each hidden layer, and dropout layers after the convolutional
+    or linear layers with given dropout probabilities.
     """
 
     if output_size == 1:
         final_activation = nn.Sigmoid()
     else:
-        final_activation = nn.Softmax()
+        final_activation = nn.Softmax(-1)
 
     return nn.Sequential(
         nn.Conv2d(input_channels, 16, (3, 3)),
@@ -142,7 +137,6 @@ EXPERIMENT_CONV_FLIP = Experiment(
     expand_flip=True,
 )
 
-# TODO: what do you mean by duplicated
 EXPERIMENT_CONV_DUPLICATED = Experiment(
     name="Duplicated",
     epochs=20,
@@ -288,23 +282,23 @@ EXPERIMENT_CONV_SHARED_AUX_MORE_MORE = Experiment(
 EXPERIMENT_RESNET = Experiment(
     name="Resnet",
     epochs=120,
-        batch_size=100,
+    batch_size=100,
 
-        build_model=lambda: WeightShareModel(
-            input_module=shared_resnet(10, True),
-            output_head=nn.Sequential(
-                nn.Flatten(),
-                nn.Linear(20, 20),
-                nn.ReLU(),
-                nn.Linear(20, 1),
-                nn.Sigmoid(),
-            )
-        ),
+    build_model=lambda: WeightShareModel(
+        input_module=build_resnet(10, True),
+        output_head=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(20, 20),
+            nn.ReLU(),
+            nn.Linear(20, 1),
+            nn.Sigmoid(),
+        )
+    ),
 
-        build_loss=nn.BCELoss,
-        aux_weight=10,
-        build_aux_loss=nn.NLLLoss,
-    )
+    build_loss=nn.BCELoss,
+    aux_weight=10,
+    build_aux_loss=nn.NLLLoss,
+)
 
 EXPERIMENT_RESNET_RESLESS = Experiment(
     name="Resnet resless",
@@ -312,7 +306,7 @@ EXPERIMENT_RESNET_RESLESS = Experiment(
     batch_size=100,
 
     build_model=lambda: WeightShareModel(
-        input_module=shared_resnet(10, False),
+        input_module=build_resnet(10, False),
         output_head=nn.Sequential(
             nn.Flatten(),
             nn.Linear(20, 20),
@@ -333,7 +327,7 @@ EXPERIMENT_RESNET_RESLESS_PROB = Experiment(
     batch_size=100,
 
     build_model=lambda: WeightShareModel(
-        input_module=shared_resnet(10, False),
+        input_module=build_resnet(10, False),
         output_head=ProbOutputLayer()
     ),
 
@@ -369,7 +363,7 @@ REPORT_EXPERIMENTS = [
 
 
 def main():
-    run_experiments("report", rounds=10, plot_titles=False, experiments=REPORT_EXPERIMENTS)
+    run_experiments("report", rounds=10, plot_titles=False, plot_loss=True, experiments=REPORT_EXPERIMENTS)
 
 
 if __name__ == '__main__':

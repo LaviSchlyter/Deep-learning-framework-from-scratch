@@ -1,7 +1,9 @@
 import math
 from typing import Optional
+
 import torch
 from torch import nn, optim
+
 from util import Data
 
 
@@ -23,12 +25,12 @@ def evaluate_model(
     :return: Loss, digit and final accuracies
     """
     batch_size = len(x)
-
     output = model(x)
 
     if not math.isnan(aux_weight):
         assert aux_loss_func, "Aux weight is set but no aux loss func given"
 
+    # separate the digit predictions if the network returns them
     if isinstance(output, tuple):
         y_pred, a_pred, b_pred = output
 
@@ -39,13 +41,14 @@ def evaluate_model(
         a_pred = None
         b_pred = None
 
+    # some sanity checks on the output
     assert not torch.any(torch.isnan(y_pred)), "found nan value in y_pred"
-
     assert y_pred.shape[1] == 1, f"final prediction should have size 1, was {y_pred.shape}"
     y_pred = y_pred[:, 0]
 
     loss = loss_func(y_pred, y_float)
 
+    # acc the aux loss if applicable
     if aux_loss_func is not None:
         if isinstance(aux_loss_func, nn.NLLLoss):
             assert a_pred.shape[1] == 10, f"digit prediction should have size 10, was {a_pred.shape}"
@@ -82,7 +85,7 @@ def train_model(
     :param aux_weight: Auxiliary weight
     :param data: Data structures containing the data
     :param epochs: Number of epochs for training
-    :param batch_size: Number of samples processed before updating the model
+    :param batch_size: Number of samples processed before updating the model, or -1 to use the entire dataset at once.
     :return: Tensor containing the evaluation at each epoch + legends for plotting
     """
     if batch_size == -1:
@@ -92,7 +95,7 @@ def train_model(
     plot_data = torch.zeros(epochs, 6)
 
     for e in range(epochs):
-        # training
+        # train step
         data.shuffle_train()
 
         for bi in range(batch_count):

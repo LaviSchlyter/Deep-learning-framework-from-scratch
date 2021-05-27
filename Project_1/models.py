@@ -5,6 +5,8 @@ from torch import nn
 
 
 class ViewModule(nn.Module):
+    """ A utility module that view the input tensor as the given shape. """
+
     def __init__(self, *shape: int):
         super().__init__()
         self.shape = shape
@@ -14,6 +16,8 @@ class ViewModule(nn.Module):
 
 
 class ShapePrintModule(nn.Module):
+    """ A utility module that prints the shape of the tensor it gets and just passes it along. """
+
     def forward(self, input):
         print(input.shape)
         return input
@@ -24,7 +28,11 @@ def dense_network(
         activation: Optional[nn.Module], last_activation: nn.Module,
         batch_norm: bool = False
 ):
-    """ Build a dense network
+    """
+    Build a dense network.
+
+    note: This function is slightly confusing to use so we stopped using it for the report plots. It was useful during
+    early experimenting and is still used for the exploration plots.
 
     :param sizes: List of the input and output sizes in consecutive order for the different layers used
     :param activation: Activation functions used throughout the network
@@ -35,7 +43,8 @@ def dense_network(
     assert len(sizes) >= 0, "Dense network needs at least an input size"
 
     layers = [
-        nn.Flatten() # TODO: Why ?
+        # start by flatting the input for if input is a 2D shape for an image or a 3D shape as output by a convolution
+        nn.Flatten()
     ]
 
     prev_size = sizes[0]
@@ -57,7 +66,13 @@ def dense_network(
     return nn.Sequential(*layers)
 
 
-def full_conv_network():
+def basic_conv_network():
+    """
+    Build a simple convolutional network.
+
+    note: this function is also not used anymore for report results.
+    """
+
     return nn.Sequential(
         nn.Conv2d(2, 32, (5, 5)),
         nn.MaxPool2d(2),
@@ -72,11 +87,10 @@ def full_conv_network():
 
 
 def shared_conv_network(last_activation: nn.Module, output_size: int):
-    """ Shared convolutional neural network
+    """
+    Build the convolutional network used for weight sharing.
 
-    :param last_activation: Last activation function module
-    :param output_size: Output size of the shared network
-    :return: Sequential
+    note: this function is also not used anymore for report results.
     """
     return nn.Sequential(
         nn.Conv2d(1, 32, (5, 5)),
@@ -97,13 +111,17 @@ def shared_conv_network(last_activation: nn.Module, output_size: int):
     )
 
 
-# Resnet code based on https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
 class ResnetBlock(nn.Module):
+    """
+    A single Residual block as described in https://arxiv.org/pdf/1512.03385.pdf.
+    We only implement the simple variant with the same number of input and output channels.
+    The residual connections can be turned off with `res=False`.
+    """
+
     def __init__(self, channels: int, res=True):
         """
-
-        :param channels:
-        :param res:
+        :param channels The number of input and output channels.:
+        :param res Whether to include the residual connection.
         """
         super().__init__()
 
@@ -133,7 +151,13 @@ class ResnetBlock(nn.Module):
         return x
 
 
-def shared_resnet(output_size: int, res: bool):
+def build_resnet(output_size: int, res: bool):
+    """
+    Build a Resnet-based network for use in weight sharing models.
+    Takes as input a single digit image and returns a vector of size `output_size`.
+    `res` controls whether to enable the residual connections.
+    """
+
     return nn.Sequential(
         nn.Conv2d(1, 32, (3, 3), padding=(1, 1)),
         nn.ReLU(),
@@ -156,11 +180,24 @@ def shared_resnet(output_size: int, res: bool):
 
 
 class PreprocessModel(nn.Module):
+    """
+    A module that preprocesses both input images, each with a possibly different network,
+    before concatenating their outputs and passing that through a final network.
+    This is module is used for the Shared/Duplicate comparison.
+    """
+
     def __init__(
             self,
             a_input_module: nn.Module, b_input_module: nn.Module,
             output_head: nn.Module, digit_head: Optional[nn.Module] = None
     ):
+        """
+        :param a_input_module: The module that preprocesses the first digit.
+        :param b_input_module: THe module that preprocesses
+        :param output_head:
+        :param digit_head:
+        """
+
         super().__init__()
         self.a_input_module = a_input_module
         self.b_input_module = b_input_module
@@ -183,11 +220,23 @@ class PreprocessModel(nn.Module):
 
 
 class WeightShareModel(PreprocessModel):
+    """
+    A variant of `PreprocessModel` where the same `input_module` is used for both digits, as a form of weight sharing.
+    """
+
     def __init__(self, input_module: nn.Module, output_head: nn.Module, digit_head: Optional[nn.Module] = None):
         super().__init__(input_module, input_module, output_head, digit_head)
 
 
 class ProbOutputLayer(nn.Module):
+    """
+    A custom output layer that looks at the predicted probabilities  for both digits and returns the correctly computed
+    probability that the first is >= the second. This is meant as a replacement for the final prediction network.
+
+    note: We chose not to include this is the report because this is not really machine learning any more, it's a fixed
+    function designed by us.
+    """
+
     @staticmethod
     def forward(input):
         lte_mask = torch.ones(10, 10).triu()[None, :, :].to(input.device)
