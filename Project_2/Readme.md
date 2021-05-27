@@ -13,3 +13,6 @@ The rest of this project is demo code for the `hyper` framework:µ
 * `gradient_verification` is a small program we used to check our gradient implementations: 
   it compares the gradient computed during backpropagation to gradients calculated using numerical differentiation
 
+# VM Bug
+
+We found that sometimes running our code on the VM Segfaults during a `torch.exp(x)` operation. The VM is not running out of memory, and we don't really know what else could cause this. We found doing `math.e ** x` stops this issue from occuring for us, but we're not sure how consistent that is.

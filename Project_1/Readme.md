@@ -10,3 +10,11 @@ This is our Project 1 for testing different architectures
   to make it a bit faster to run on the VM.
 * `experiment_report` reproduces all the experiments we talk about in the report
 * `experiment_explorer` contains different experiments used during the project, some of which we later dropped.
+
+# VM Bug
+
+When running on the VM, sometimes our model training suddenly begins producing nan values during training. We could not
+reproduce this issue on either of our laptops, on both Windows, Linux, and device CPU and CUDA. To attempt to stop this
+issue from happening, the model test.py currently trains is not exactly the one from the report, it's a variant with
+auxiliary weight a=1 and loss function LossMSE instead. This seems to crash a lot less often. The final accuracy is
+still close to the one in the report.

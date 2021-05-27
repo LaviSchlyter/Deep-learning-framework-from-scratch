@@ -20,7 +20,7 @@ EXPERIMENT = Experiment(
         )
     ),
 
-    build_loss=nn.BCELoss,
+    build_loss=nn.MSELoss,
     aux_weight=1,
     build_aux_loss=nn.NLLLoss,
 )
