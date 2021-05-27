@@ -1,4 +1,4 @@
-This is our Project 1 source code.
+This is our Project 1 for testing different architectures
 
 * `core` contains the training loop and model evaluation
 * `run_experiments` contains infrastructure for easily running an experiment for multiple rounds with newly generated
