@@ -135,5 +135,9 @@ def train_model(
             train_loss.item(), test_loss.item(),
         ])
 
+        print(f"Epoch {e + 1}/{epochs}:"
+              f" train_loss={train_loss:.4}, train_acc={train_acc:.4}"
+              f" test_loss={test_loss:.4}, test_acc={test_acc:.4}")
+
     plot_legend = "train_acc", "train_digit_acc", "test_acc", "test_digit_acc", "train_loss", "test_loss"
     return plot_data, plot_legend
