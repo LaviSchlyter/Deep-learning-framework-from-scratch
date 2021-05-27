@@ -18,8 +18,8 @@ from util import run_experiment, set_plot_font_size
 ROUNDS = 3
 EPOCHS = 250
 DATA_SIZE = 1000
-LOG_EPOCHS = False
-EXTRA_PLOTS = True
+LOG_EPOCHS = True
+EXTRA_PLOTS = False
 MAKE_MOVIE = False
 
 
