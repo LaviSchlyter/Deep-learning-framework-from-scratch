@@ -9,7 +9,7 @@ The framework itself is located in the `hyper` folder:
 The rest of this project is demo code for the `hyper` framework:µ
 * `test` is the main file that reproduces the figures and training shown in our report.
 * `architectures` defines the actual networks used.
-* `util` contains a bunch of utility functions for model training, data generation, plotting, ...
+* `util` contains a number of utility functions for model training, data generation, plotting, ...
 * `gradient_verification` is a small program we used to check our gradient implementations: 
   it compares the gradient computed during backpropagation to gradients calculated using numerical differentiation
 

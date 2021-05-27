@@ -249,7 +249,7 @@ def plot_experiment(name: str, model, data, all_plot_data, extra_plots):
         y_test_bool_pred = (y_test_pred.value > 0.5)
         boolean_falsely_predicted = (y_test_bool_pred != data.test_y.value)
         coordinate_false = data.test_x.value[boolean_falsely_predicted.squeeze(1)]
-        print("coord", coordinate_false.shape)
+
 
         y_train_bool_pred = (y_train_pred.value > 0.5).squeeze(1)
         plt.scatter(data.train_x.value[y_train_bool_pred, 0], data.train_x.value[y_train_bool_pred, 1], color="red")

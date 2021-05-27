@@ -15,10 +15,10 @@ from hyper.loss import LossMSE, LossBCE
 from hyper.optimizer import SGD, Adam
 from util import run_experiment, set_plot_font_size
 
-ROUNDS = 1
+ROUNDS = 3
 EPOCHS = 250
 DATA_SIZE = 1000
-LOG_EPOCHS = True
+LOG_EPOCHS = False
 EXTRA_PLOTS = True
 MAKE_MOVIE = False
 
@@ -30,7 +30,7 @@ def main_WS_MSE_SGD():
         rounds=ROUNDS,
         n=DATA_SIZE,
         build_model=build_shared_model,
-        build_optimizer=lambda param: SGD(param, lr=0.3, lambda_=0),
+        build_optimizer=lambda param: SGD(param, lr=0.4, lambda_=0),
         loss_func=LossMSE(),
         epochs=EPOCHS,
         log_epochs=LOG_EPOCHS,
@@ -46,7 +46,7 @@ def main_MSE_SGD():
         rounds=ROUNDS,
         n=DATA_SIZE,
         build_model=build_simple_model,
-        build_optimizer=lambda param: SGD(param, lr=0.3, lambda_=1e-4),
+        build_optimizer=lambda param: SGD(param, lr=0.5, lambda_=1e-4),
         loss_func=LossMSE(),
         epochs=EPOCHS,
         log_epochs=LOG_EPOCHS,
@@ -124,9 +124,9 @@ if __name__ == '__main__':
     torch.set_grad_enabled(False)
     set_plot_font_size()
 
-    # main_MSE_SGD()
+    main_MSE_SGD()
     # main_BCE_SGD()
-    main_MSE_Adam()
+    # main_MSE_Adam()
     # main_BCE_Adam()
     # main_WS_MSE_SGD()
-    main_WS_MSE_Adam()
+    # main_WS_MSE_Adam()
