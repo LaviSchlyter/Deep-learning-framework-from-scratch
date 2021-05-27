@@ -132,8 +132,11 @@ def run_experiment(
 
         f.write("Final performance:\n")
         for i in range(len(plot_legend)):
-            f.write(f"{plot_legend[i]} = {plot_data_mean[-1, i]:.3f} +- {plot_data_dev[-1, i]:.3f}"
-                    f" (min={plot_data_min[-1, i]:.3f}, max={plot_data_max[-1, i]:.3f})\n")
+            line = f"{plot_legend[i]} = {plot_data_mean[-1, i]:.3f} +- {plot_data_dev[-1, i]:.3f}" \
+                   f" (min={plot_data_min[-1, i]:.3f}, max={plot_data_max[-1, i]:.3f})"
+
+            print(line)
+            f.write(line + "\n")
 
 
 def run_experiments(
