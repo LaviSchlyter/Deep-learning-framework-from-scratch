@@ -1,12 +1,20 @@
 import sys
 from dataclasses import dataclass, fields
 from enum import Enum, auto
+
 import torch
 from torchvision.transforms import RandomAffine, InterpolationMode
+
 from dlc_practical_prologue import generate_pair_sets
 
 
 def select_device(debug_on_cpu: bool):
+    """
+    Select a device to run the tensor operations on.
+    If `debug_on_cpu` is `True` and we're running in a debugger this returns `cpu` even if `cuda` is available to make
+    debugging easier.
+    """
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if debug_on_cpu:
@@ -24,6 +32,8 @@ DEVICE = select_device(debug_on_cpu=True)
 
 @dataclass
 class Data:
+    """ A utility data class to store train and test data. """
+
     train_size: int
     train_x: torch.Tensor
     train_y: torch.Tensor
@@ -37,13 +47,16 @@ class Data:
     test_digit: torch.Tensor
 
     def to(self, device):
+        """ Move all tensors to a different device. """
         for field in fields(self):
             value = getattr(self, field.name)
             if isinstance(value, torch.Tensor):
                 setattr(self, field.name, value.to(device))
 
     def expand_train_flip(self):
-        """ Expanding the data by flipping them
+        """
+        Expand the train data flipping digits and chaining the output boolean accordingly.
+        This doubles the size of the train set.
         """
         same_digit = self.train_digit[:, 0] == self.train_digit[:, 1]
 
@@ -53,10 +66,9 @@ class Data:
         self.train_digit = torch.cat([self.train_digit, self.train_digit.flip(1)])
 
     def expand_train_transform(self, factor: int):
-        """ Expanding data with rotation and shearing
-
-        :param factor: How much larger the train size should be
-        :return: A training set with expanded data using rotation and shearing
+        """
+        Expand train data with rotation and shearing in-place. `factor` is the factor by which to expand the train set,
+         eg. `1` doesn't generate any new data and `2` doubles it.
         """
         assert factor >= 1
         transform = RandomAffine(degrees=10, shear=20, interpolation=InterpolationMode.BILINEAR)
@@ -72,9 +84,8 @@ class Data:
         self.train_digit = self.train_digit.repeat(factor, 1)
 
     def shuffle_train(self):
-        """ Shuffling the training data
-            TODO: Why is this done
-        :return: Shuffled training data
+        """
+        Shuffle the train data, this is important when training is using minibatches.
         """
         perm = torch.randperm(len(self.train_x))
         self.train_x = self.train_x[perm]
@@ -93,6 +104,9 @@ class InputNormalization(Enum):
 
 
 def normalize(train_x, test_x, input_normalization: InputNormalization):
+    """
+    Normalize the given data with the given mode.
+    """
     if input_normalization == InputNormalization.No:
         std = torch.tensor(1)
         mean = torch.tensor(0)
@@ -109,6 +123,7 @@ def normalize(train_x, test_x, input_normalization: InputNormalization):
 
 
 def load_data(data_size: int, input_normalization: InputNormalization = InputNormalization.No) -> Data:
+    """ Load/generate training and test data with the given size and normalization mode. """
     train_x, train_y, train_digit, test_x, test_y, test_digit = generate_pair_sets(data_size)
 
     train_x, test_x = normalize(train_x, test_x, input_normalization)
